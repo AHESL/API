@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JSON格式化/压缩器</title>
+    <style>
+    /* === 字体声明 === */
+    @font-face {
+      font-family: 'MR-ZT';
+      src: url('../zw.ttf') format('truetype');
+      font-display: swap;
+      unicode-range: U+4E00-9FFF;
+    }
+    @font-face {
+      font-family: 'EnglishFont';
+      src: url('../yw.ttf') format('truetype');
+      font-display: swap;
+      unicode-range: U+0020-007F, U+FF00-FFEF;
+    }
+
+        :root {
+            --bg-deep: #0a1412;
+            --card-bg: rgba(16, 36, 32, 0.75);
+            --text-primary: #e0f0e8;
+            --text-secondary: #a0c8b8;
+            --accent-1: #80e8c0;
+            --accent-2: #60d0c8;
+            --accent-3: #a0d8b0;
+            --emerald: #60d0a0;
+            --emerald-bright: #80f0c0;
+            --glow-emerald: rgba(96, 208, 160, 0.5);
+            --glow-cyan: rgba(80, 200, 190, 0.4);
+            --glow-teal: rgba(80, 180, 160, 0.55);
+            --glow-error: rgba(255, 130, 120, 0.5);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(120, 210, 180, 0.35);
+            --font-sans: 'MR-ZT', 'EnglishFont', 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+            --font-mono: 'MR-ZT', 'EnglishFont', 'Consolas', 'Monaco', 'SF Mono', 'Fira Code', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg-deep);
+            font-family: var(--font-sans);
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            cursor: default;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(80px);
+            opacity: 0.35;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+        }
+        .bg-orb--emerald {
+            width: 420px;
+            height: 420px;
+            background: radial-gradient(circle, rgba(80, 200, 150, 0.5) 0%, transparent 70%);
+            top: -15%;
+            left: -10%;
+            animation-name: orbFloat1;
+            animation-duration: 18s;
+        }
+        .bg-orb--cyan {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, rgba(40, 180, 190, 0.4) 0%, transparent 70%);
+            bottom: -18%;
+            right: -8%;
+            animation-name: orbFloat2;
+            animation-duration: 22s;
+        }
+        .bg-orb--teal {
+            width: 280px;
+            height: 280px;
+            background: radial-gradient(circle, rgba(60, 170, 140, 0.35) 0%, transparent 70%);
+            top: 50%;
+            left: 55%;
+            animation-name: orbFloat3;
+            animation-duration: 20s;
+            animation-delay: -7s;
+        }
+        .bg-orb--mint {
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(100, 200, 170, 0.3) 0%, transparent 70%);
+            top: 30%;
+            left: 65%;
+            animation-name: orbFloat4;
+            animation-duration: 15s;
+            animation-delay: -3s;
+        }
+
+        @keyframes orbFloat1 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            25% {
+                transform: translate(80px, 50px) scale(1.15);
+            }
+            50% {
+                transform: translate(30px, -30px) scale(0.9);
+            }
+            75% {
+                transform: translate(-40px, 60px) scale(1.08);
+            }
+        }
+        @keyframes orbFloat2 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            33% {
+                transform: translate(-60px, -40px) scale(1.12);
+            }
+            66% {
+                transform: translate(40px, 30px) scale(0.88);
+            }
+        }
+        @keyframes orbFloat3 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            30% {
+                transform: translate(-50px, 40px) scale(1.1);
+            }
+            60% {
+                transform: translate(20px, -50px) scale(0.92);
+            }
+            90% {
+                transform: translate(40px, 20px) scale(1.05);
+            }
+        }
+        @keyframes orbFloat4 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(-30px, -25px) scale(1.2);
+            }
+        }
+
+        .main-card {
+            position: relative;
+            z-index: 10;
+            width: 520px;
+            max-width: 94vw;
+            background: var(--card-bg);
+            backdrop-filter: blur(28px) saturate(140%);
+            -webkit-backdrop-filter: blur(28px) saturate(140%);
+            border-radius: 28px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 4px 40px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                0 20px 60px rgba(40, 160, 120, 0.1);
+            padding: 40px 36px 36px;
+            transition: box-shadow 0.8s ease, border-color 0.8s ease;
+        }
+        .main-card.result-visible {
+            border-color: var(--border-glow);
+            box-shadow: 0 4px 40px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                0 20px 70px rgba(80, 180, 150, 0.18), 0 0 0 1px rgba(120, 200, 170, 0.1);
+        }
+        .main-card.error-state {
+            border-color: rgba(255, 130, 120, 0.35);
+            box-shadow: 0 4px 40px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                0 20px 70px rgba(255, 100, 90, 0.14), 0 0 0 1px rgba(255, 140, 130, 0.08);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 28px;
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        .card-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 32px;
+            height: 2px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3));
+            opacity: 0.7;
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s;
+        }
+        .main-card.result-visible .card-title::after {
+            width: 50px;
+            opacity: 1;
+            background: linear-gradient(90deg, var(--accent-1), var(--emerald-bright), var(--accent-2));
+        }
+        .main-card.error-state .card-title::after {
+            background: linear-gradient(90deg, #ff9090, #ffb0a0, #ff9090);
+            opacity: 0.9;
+        }
+        .title-icon {
+            display: inline-block;
+            margin-right: 6px;
+            animation: titleIconPulse 2.5s ease-in-out infinite;
+        }
+        @keyframes titleIconPulse {
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            50% {
+                transform: scale(1.15);
+                opacity: 1;
+            }
+        }
+
+        .mode-switch {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .mode-btn {
+            padding: 8px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+            letter-spacing: 0.03em;
+        }
+        .mode-btn.active {
+            background: linear-gradient(135deg, rgba(128, 232, 192, 0.2), rgba(96, 208, 200, 0.2));
+            border-color: var(--accent-2);
+            color: var(--text-primary);
+            box-shadow: 0 0 15px rgba(96, 208, 200, 0.2);
+        }
+        .mode-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        .input-field {
+            width: 100%;
+            padding: 14px 48px 14px 18px;
+            font-size: 0.95rem;
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.03);
+            border: none;
+            border-radius: 14px;
+            outline: none;
+            caret-color: var(--accent-2);
+            letter-spacing: 0.02em;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 0 0px transparent, 0 2px 8px rgba(0, 0, 0, 0.2) inset;
+            position: relative;
+            z-index: 2;
+        }
+        .input-field::placeholder {
+            color: rgba(160, 200, 185, 0.45);
+            letter-spacing: 0.03em;
+            font-family: var(--font-sans);
+            transition: color 0.4s, letter-spacing 0.4s;
+        }
+        .input-field:focus::placeholder {
+            color: rgba(160, 200, 185, 0.25);
+            letter-spacing: 0.06em;
+        }
+        .input-field:focus {
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 0 0 3px rgba(100, 200, 170, 0.18), 0 2px 8px rgba(0, 0, 0, 0.15) inset;
+        }
+
+        .input-glow-bar {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0%;
+            height: 2.5px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-1));
+            z-index: 3;
+            pointer-events: none;
+            opacity: 0;
+            filter: blur(0.5px);
+            transition: width 0.65s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.45s ease;
+        }
+        .input-field:focus~.input-glow-bar {
+            width: 85%;
+            opacity: 1;
+            filter: blur(0px);
+            box-shadow: 0 0 14px 3px var(--glow-emerald);
+        }
+        .main-card.result-visible .input-glow-bar {
+            background: linear-gradient(90deg, var(--accent-1), var(--emerald-bright), var(--accent-2));
+        }
+        .main-card.error-state .input-glow-bar {
+            background: linear-gradient(90deg, #ff9090, #ffb0a0, #ff9090);
+            box-shadow: 0 0 14px 3px rgba(255, 130, 120, 0.5);
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%) scale(0);
+            z-index: 5;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.04);
+            color: rgba(200, 220, 210, 0.7);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            pointer-events: none;
+            opacity: 0;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .clear-btn.visible {
+            transform: translateY(-50%) scale(1);
+            pointer-events: auto;
+            opacity: 1;
+        }
+        .clear-btn:hover {
+            background: rgba(255, 100, 100, 0.2);
+            border-color: rgba(255, 150, 150, 0.5);
+            color: #ffaaaa;
+            box-shadow: 0 0 16px rgba(255, 100, 100, 0.35);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .clear-btn:active {
+            transform: translateY(-50%) scale(0.9);
+            transition: transform 0.15s ease;
+        }
+        .clear-btn svg {
+            width: 14px;
+            height: 14px;
+            pointer-events: none;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .clear-btn:hover svg {
+            transform: rotate(90deg);
+        }
+
+        .connector-line {
+            width: 2px;
+            height: 0;
+            margin: 0 auto;
+            background: linear-gradient(to bottom,
+                    rgba(100, 200, 160, 0),
+                    rgba(120, 200, 180, 0.7) 40%,
+                    rgba(140, 210, 190, 0.8) 60%,
+                    rgba(120, 200, 180, 0.7) 80%,
+                    rgba(100, 200, 160, 0));
+            border-radius: 1px;
+            transition: height 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            z-index: 1;
+        }
+        .connector-line.active {
+            height: 28px;
+            animation: connectorGlow 2s ease-in-out infinite;
+        }
+        .connector-line.error-line {
+            background: linear-gradient(to bottom,
+                    rgba(255, 130, 120, 0),
+                    rgba(255, 150, 140, 0.7) 40%,
+                    rgba(255, 160, 150, 0.8) 60%,
+                    rgba(255, 150, 140, 0.7) 80%,
+                    rgba(255, 130, 120, 0));
+            animation: connectorGlowError 2s ease-in-out infinite;
+        }
+        @keyframes connectorGlow {
+            0%,
+            100% {
+                box-shadow: 0 0 6px 1px rgba(100, 200, 160, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 16px 4px rgba(140, 220, 180, 0.6);
+            }
+        }
+        @keyframes connectorGlowError {
+            0%,
+            100% {
+                box-shadow: 0 0 6px 1px rgba(255, 130, 120, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 16px 4px rgba(255, 150, 140, 0.6);
+            }
+        }
+
+        .result-outer-wrapper {
+            position: relative;
+            margin: 0 auto;
+            width: 100%;
+            height: 0;
+            overflow: visible;
+            transition: height 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .result-outer-wrapper.expanded {
+            height: auto;
+        }
+
+        .result-halo {
+            position: absolute;
+            inset: -6px;
+            border-radius: 26px;
+            background: conic-gradient(from 0deg,
+                    transparent 0deg,
+                    rgba(120, 220, 180, 0.55) 45deg,
+                    rgba(100, 200, 190, 0.45) 90deg,
+                    rgba(160, 230, 190, 0.5) 135deg,
+                    transparent 180deg,
+                    rgba(120, 220, 180, 0.55) 225deg,
+                    rgba(100, 200, 190, 0.45) 270deg,
+                    rgba(160, 230, 190, 0.5) 315deg,
+                    transparent 360deg);
+            opacity: 0;
+            transform: scale(0.5);
+            pointer-events: none;
+            transition: opacity 0.5s ease, transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .result-halo.spinning {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .result-halo.error-halo {
+            background: conic-gradient(from 0deg,
+                    transparent 0deg,
+                    rgba(255, 150, 140, 0.55) 45deg,
+                    rgba(255, 130, 120, 0.45) 90deg,
+                    rgba(255, 160, 150, 0.5) 135deg,
+                    transparent 180deg,
+                    rgba(255, 150, 140, 0.55) 225deg,
+                    rgba(255, 130, 120, 0.45) 270deg,
+                    rgba(255, 160, 150, 0.5) 315deg,
+                    transparent 360deg);
+        }
+
+        .result-inner {
+            position: relative;
+            width: 100%;
+            margin: 14px auto;
+            border-radius: 16px;
+            background: rgba(18, 32, 28, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+            overflow: hidden;
+            transform: scale(0);
+            opacity: 0;
+            transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
+            z-index: 2;
+        }
+        .result-inner.visible {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .result-text {
+            padding: 16px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+            word-break: break-all;
+            overflow-y: auto;
+            max-height: 240px;
+            font-family: var(--font-mono);
+            white-space: pre-wrap;
+            letter-spacing: 0.01em;
+        }
+        .result-text.error-text {
+            color: #ffb0a5;
+            font-family: var(--font-sans);
+            letter-spacing: 0.03em;
+        }
+        .result-text::-webkit-scrollbar {
+            width: 4px;
+        }
+        .result-text::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .result-text::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+        }
+        .result-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding: 8px 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .copy-btn {
+            padding: 6px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.03em;
+        }
+        .copy-btn:hover {
+            background: rgba(96, 208, 200, 0.15);
+            border-color: var(--accent-2);
+            color: var(--accent-2);
+            box-shadow: 0 0 10px rgba(96, 208, 200, 0.2);
+        }
+        .copy-btn.copied {
+            background: rgba(100, 210, 160, 0.2);
+            border-color: #64d8a0;
+            color: #64d8a0;
+        }
+        .copy-btn.copy-error {
+            background: rgba(255, 130, 120, 0.15);
+            border-color: rgba(255, 150, 140, 0.5);
+            color: #ffb0a5;
+        }
+        .copy-btn.copy-error:hover {
+            box-shadow: 0 0 10px rgba(255, 130, 120, 0.25);
+        }
+
+        .result-glow-pulse {
+            position: absolute;
+            inset: 8px;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0;
+            box-shadow: 0 0 30px 8px var(--glow-teal), 0 0 60px 20px rgba(100, 180, 150, 0.3);
+            transition: opacity 0.5s ease;
+            animation: none;
+        }
+        .result-glow-pulse.active {
+            opacity: 1;
+            animation: glowBreathe 3s ease-in-out infinite;
+        }
+        .result-glow-pulse.error-pulse {
+            box-shadow: 0 0 30px 8px rgba(255, 130, 120, 0.5), 0 0 60px 20px rgba(255, 100, 90, 0.25);
+            animation: glowBreatheError 3s ease-in-out infinite;
+        }
+        @keyframes glowBreathe {
+            0%,
+            100% {
+                box-shadow: 0 0 25px 6px var(--glow-teal), 0 0 50px 16px rgba(100, 180, 150, 0.25);
+            }
+            50% {
+                box-shadow: 0 0 40px 14px rgba(100, 210, 170, 0.6), 0 0 75px 28px rgba(100, 180, 150, 0.4);
+            }
+        }
+        @keyframes glowBreatheError {
+            0%,
+            100% {
+                box-shadow: 0 0 25px 6px rgba(255, 130, 120, 0.45), 0 0 50px 16px rgba(255, 100, 90, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 40px 14px rgba(255, 140, 130, 0.55), 0 0 75px 28px rgba(255, 110, 100, 0.35);
+            }
+        }
+
+        .corner-mark {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .corner-mark.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .corner-mark::before,
+        .corner-mark::after {
+            content: '';
+            position: absolute;
+            background: var(--emerald);
+            border-radius: 1px;
+            box-shadow: 0 0 6px 1px var(--glow-teal);
+        }
+        .corner-mark::before {
+            width: 100%;
+            height: 1.5px;
+        }
+        .corner-mark::after {
+            width: 1.5px;
+            height: 100%;
+        }
+        .corner-mark.error-mark::before,
+        .corner-mark.error-mark::after {
+            background: #ff9090;
+            box-shadow: 0 0 6px 1px rgba(255, 130, 120, 0.55);
+        }
+        .corner-mark--tl {
+            top: -8px;
+            left: -8px;
+        }
+        .corner-mark--tl::before {
+            top: 0;
+            left: 0;
+        }
+        .corner-mark--tl::after {
+            top: 0;
+            left: 0;
+        }
+        .corner-mark--tr {
+            top: -8px;
+            right: -8px;
+        }
+        .corner-mark--tr::before {
+            top: 0;
+            right: 0;
+        }
+        .corner-mark--tr::after {
+            top: 0;
+            right: 0;
+        }
+        .corner-mark--bl {
+            bottom: -8px;
+            left: -8px;
+        }
+        .corner-mark--bl::before {
+            bottom: 0;
+            left: 0;
+        }
+        .corner-mark--bl::after {
+            bottom: 0;
+            left: 0;
+        }
+        .corner-mark--br {
+            bottom: -8px;
+            right: -8px;
+        }
+        .corner-mark--br::before {
+            bottom: 0;
+            right: 0;
+        }
+        .corner-mark--br::after {
+            bottom: 0;
+            right: 0;
+        }
+
+        .particle-burst-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .burst-particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 1.5px;
+            pointer-events: none;
+            animation: particleBurst 0.7s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+        @keyframes particleBurst {
+            0% {
+                transform: translate(0, 0) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--dx), var(--dy)) scale(0) rotate(var(--rot));
+                opacity: 0;
+            }
+        }
+
+        .ripple-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid rgba(120, 210, 180, 0.7);
+            pointer-events: none;
+            z-index: 15;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 0;
+            animation: none;
+        }
+        .ripple-ring.animate {
+            animation: rippleOut 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+        .ripple-ring.error-ring {
+            border-color: rgba(255, 150, 140, 0.7);
+        }
+        @keyframes rippleOut {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.9;
+                border-width: 3px;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(28);
+                opacity: 0;
+                border-width: 0.5px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .main-card {
+                padding: 28px 20px 24px;
+                border-radius: 22px;
+            }
+            .card-title {
+                font-size: 1.1rem;
+                margin-bottom: 22px;
+            }
+            .input-field {
+                padding: 12px 42px 12px 14px;
+                font-size: 0.85rem;
+            }
+            .result-inner {
+                margin: 10px auto;
+            }
+            .result-text {
+                font-size: 0.8rem;
+                max-height: 180px;
+            }
+            .result-halo {
+                inset: -4px;
+                border-radius: 22px;
+            }
+            .corner-mark {
+                width: 12px;
+                height: 12px;
+            }
+            .corner-mark--tl {
+                top: -6px;
+                left: -6px;
+            }
+            .corner-mark--tr {
+                top: -6px;
+                right: -6px;
+            }
+            .corner-mark--bl {
+                bottom: -6px;
+                left: -6px;
+            }
+            .corner-mark--br {
+                bottom: -6px;
+                right: -6px;
+            }
+            .clear-btn {
+                width: 26px;
+                height: 26px;
+            }
+            .clear-btn svg {
+                width: 12px;
+                height: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-orb bg-orb--emerald"></div>
+    <div class="bg-orb bg-orb--cyan"></div>
+    <div class="bg-orb bg-orb--teal"></div>
+    <div class="bg-orb bg-orb--mint"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <div class="main-card" id="mainCard">
+        <div class="card-title">
+            <span class="title-icon">✨</span>JSON格式化/压缩器
+        </div>
+
+        <div class="mode-switch">
+            <button class="mode-btn active" id="formatBtn">美化</button>
+            <button class="mode-btn" id="compressBtn">压缩</button>
+        </div>
+
+        <div class="input-wrapper" id="inputWrapper">
+            <input type="text" class="input-field" id="inputField" placeholder="输入JSON字符串，按回车美化..." autocomplete="off" spellcheck="false">
+            <div class="input-glow-bar"></div>
+            <button class="clear-btn" id="clearBtn" aria-label="清空内容">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="connector-line" id="connectorLine"></div>
+
+        <div class="result-outer-wrapper" id="resultOuterWrapper">
+            <div class="result-halo" id="resultHalo"></div>
+            <div class="result-glow-pulse" id="resultGlowPulse"></div>
+            <div class="result-inner" id="resultInner">
+                <div class="result-text" id="resultText"></div>
+                <div class="result-actions">
+                    <button class="copy-btn" id="copyBtn">复制结果</button>
+                </div>
+                <div class="corner-mark corner-mark--tl" id="cornerTL"></div>
+                <div class="corner-mark corner-mark--tr" id="cornerTR"></div>
+                <div class="corner-mark corner-mark--bl" id="cornerBL"></div>
+                <div class="corner-mark corner-mark--br" id="cornerBR"></div>
+            </div>
+            <div class="particle-burst-layer" id="particleBurstLayer"></div>
+            <div class="ripple-ring" id="rippleRing"></div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const mainCard = document.getElementById('mainCard');
+            const inputField = document.getElementById('inputField');
+            const clearBtn = document.getElementById('clearBtn');
+            const connectorLine = document.getElementById('connectorLine');
+            const resultOuterWrapper = document.getElementById('resultOuterWrapper');
+            const resultHalo = document.getElementById('resultHalo');
+            const resultGlowPulse = document.getElementById('resultGlowPulse');
+            const resultInner = document.getElementById('resultInner');
+            const resultText = document.getElementById('resultText');
+            const copyBtn = document.getElementById('copyBtn');
+            const cornerTL = document.getElementById('cornerTL');
+            const cornerTR = document.getElementById('cornerTR');
+            const cornerBL = document.getElementById('cornerBL');
+            const cornerBR = document.getElementById('cornerBR');
+            const particleBurstLayer = document.getElementById('particleBurstLayer');
+            const rippleRing = document.getElementById('rippleRing');
+            const formatBtn = document.getElementById('formatBtn');
+            const compressBtn = document.getElementById('compressBtn');
+
+            let currentMode = 'format'; // format or compress
+            let currentResult = '';
+            let isResultVisible = false;
+            let isAnimating = false;
+            let isErrorState = false;
+
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            const PARTICLE_COUNT = 70;
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resizeCanvas();
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                initParticles();
+            });
+
+            function createParticle() {
+                return {
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2.2 + 0.6,
+                    speedX: (Math.random() - 0.5) * 0.35,
+                    speedY: (Math.random() - 0.5) * 0.35,
+                    opacity: Math.random() * 0.5 + 0.2,
+                    pulseSpeed: Math.random() * 0.015 + 0.005,
+                    pulseOffset: Math.random() * Math.PI * 2,
+                    hue: Math.random() < 0.5 ? 155 + Math.random() * 30 : 175 + Math.random() * 25,
+                };
+            }
+
+            function initParticles() {
+                particles = [];
+                for (let i = 0; i < PARTICLE_COUNT; i++) {
+                    particles.push(createParticle());
+                }
+            }
+            initParticles();
+
+            function animateParticles(timestamp) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.x += p.speedX;
+                    p.y += p.speedY;
+                    if (p.x < -20) p.x = canvas.width + 20;
+                    if (p.x > canvas.width + 20) p.x = -20;
+                    if (p.y < -20) p.y = canvas.height + 20;
+                    if (p.y > canvas.height + 20) p.y = -20;
+                    const pulse = Math.sin(timestamp * p.pulseSpeed + p.pulseOffset) * 0.3 + 0.7;
+                    const alpha = p.opacity * pulse;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(${p.hue}, 45%, 70%, ${alpha})`;
+                    ctx.fill();
+                    if (p.size > 1.5 && alpha > 0.3) {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
+                        ctx.fillStyle = `hsla(${p.hue}, 45%, 70%, ${alpha * 0.15})`;
+                        ctx.fill();
+                    }
+                });
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 100) {
+                            const lineAlpha = (1 - dist / 100) * 0.12;
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = `rgba(120,190,160,${lineAlpha})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(animateParticles);
+            }
+            requestAnimationFrame(animateParticles);
+
+            function getInputContent() {
+                return inputField.value.trim();
+            }
+
+            function formatJSON(text) {
+                try {
+                    const parsed = JSON.parse(text);
+                    return JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    return { error: true, message: `❌ JSON解析错误：${e.message}` };
+                }
+            }
+
+            function compressJSON(text) {
+                try {
+                    const parsed = JSON.parse(text);
+                    return JSON.stringify(parsed);
+                } catch (e) {
+                    return { error: true, message: `❌ JSON解析错误：${e.message}` };
+                }
+            }
+
+            function processContent(content) {
+                if (!content) return { error: true, message: '' };
+                if (currentMode === 'format') {
+                    return formatJSON(content);
+                } else {
+                    return compressJSON(content);
+                }
+            }
+
+            function isErrorResult(result) {
+                return result && typeof result === 'object' && result.error === true;
+            }
+
+            function getResultText(result) {
+                if (isErrorResult(result)) return result.message;
+                return result;
+            }
+
+            function clearErrorState() {
+                isErrorState = false;
+                mainCard.classList.remove('error-state');
+                resultHalo.classList.remove('error-halo');
+                resultGlowPulse.classList.remove('error-pulse');
+                connectorLine.classList.remove('error-line');
+                rippleRing.classList.remove('error-ring');
+                resultText.classList.remove('error-text');
+                copyBtn.classList.remove('copy-error');
+                const corners = [cornerTL, cornerTR, cornerBL, cornerBR];
+                corners.forEach(c => c.classList.remove('error-mark'));
+            }
+
+            function applyErrorState() {
+                isErrorState = true;
+                mainCard.classList.add('error-state');
+                resultHalo.classList.add('error-halo');
+                resultGlowPulse.classList.add('error-pulse');
+                connectorLine.classList.add('error-line');
+                rippleRing.classList.add('error-ring');
+                resultText.classList.add('error-text');
+                copyBtn.classList.add('copy-error');
+                const corners = [cornerTL, cornerTR, cornerBL, cornerBR];
+                corners.forEach(c => c.classList.add('error-mark'));
+            }
+
+            function showResult(content) {
+                if (isAnimating) return;
+                const result = processContent(content);
+
+                if (isResultVisible && currentResult === getResultText(result) && isErrorState === isErrorResult(
+                        result)) return;
+
+                if (isResultVisible && (currentResult !== getResultText(result) || isErrorState !== isErrorResult(
+                        result))) {
+                    hideResultQuick(() => {
+                        currentResult = getResultText(result);
+                        resultText.textContent = currentResult;
+                        if (isErrorResult(result)) {
+                            applyErrorState();
+                        } else {
+                            clearErrorState();
+                        }
+                        performShowAnimation();
+                    });
+                    return;
+                }
+
+                currentResult = getResultText(result);
+                resultText.textContent = currentResult;
+                if (isErrorResult(result)) {
+                    applyErrorState();
+                } else {
+                    clearErrorState();
+                }
+                performShowAnimation();
+            }
+
+            function performShowAnimation() {
+                isAnimating = true;
+                isResultVisible = true;
+                resultOuterWrapper.classList.add('expanded');
+                connectorLine.classList.add('active');
+                if (!isErrorState) {
+                    mainCard.classList.add('result-visible');
+                }
+
+                setTimeout(() => {
+                    resultInner.classList.add('visible');
+                    resultHalo.classList.add('spinning');
+                    resultGlowPulse.classList.add('active');
+                }, 150);
+
+                const corners = [cornerTL, cornerTR, cornerBL, cornerBR];
+                corners.forEach((corner, i) => {
+                    setTimeout(() => {
+                        corner.classList.add('visible');
+                    }, 280 + i * 70);
+                });
+
+                setTimeout(() => {
+                    rippleRing.classList.remove('animate');
+                    void rippleRing.offsetWidth;
+                    rippleRing.classList.add('animate');
+                }, 200);
+
+                setTimeout(() => {
+                    isAnimating = false;
+                }, 600);
+
+                updateClearBtn();
+            }
+
+            function hideResult(callback) {
+                if (isAnimating && !callback) return;
+                isAnimating = true;
+                spawnBurstParticles();
+
+                const corners = [cornerTL, cornerTR, cornerBL, cornerBR];
+                corners.forEach((corner, i) => {
+                    setTimeout(() => {
+                        corner.classList.remove('visible');
+                    }, i * 40);
+                });
+
+                setTimeout(() => {
+                    resultInner.classList.remove('visible');
+                    resultHalo.classList.remove('spinning');
+                    resultGlowPulse.classList.remove('active');
+                }, 80);
+
+                setTimeout(() => {
+                    resultOuterWrapper.classList.remove('expanded');
+                    connectorLine.classList.remove('active');
+                    connectorLine.classList.remove('error-line');
+                    mainCard.classList.remove('result-visible');
+                    mainCard.classList.remove('error-state');
+                    resultHalo.classList.remove('error-halo');
+                    resultGlowPulse.classList.remove('error-pulse');
+                    rippleRing.classList.remove('error-ring');
+                    resultText.classList.remove('error-text');
+                    copyBtn.classList.remove('copy-error');
+                    corners.forEach(c => c.classList.remove('error-mark'));
+                }, 300);
+
+                setTimeout(() => {
+                    resultText.textContent = '';
+                    currentResult = '';
+                    isResultVisible = false;
+                    isErrorState = false;
+                    isAnimating = false;
+                    updateClearBtn();
+                    if (callback) callback();
+                }, 500);
+            }
+
+            function hideResultQuick(callback) {
+                resultInner.classList.remove('visible');
+                resultHalo.classList.remove('spinning');
+                resultGlowPulse.classList.remove('active');
+
+                const corners = [cornerTL, cornerTR, cornerBL, cornerBR];
+                corners.forEach(c => c.classList.remove('visible'));
+
+                resultText.textContent = '';
+                currentResult = '';
+                isResultVisible = false;
+                isErrorState = false;
+                mainCard.classList.remove('error-state');
+                resultHalo.classList.remove('error-halo');
+                resultGlowPulse.classList.remove('error-pulse');
+                connectorLine.classList.remove('error-line');
+                rippleRing.classList.remove('error-ring');
+                resultText.classList.remove('error-text');
+                copyBtn.classList.remove('copy-error');
+                corners.forEach(c => c.classList.remove('error-mark'));
+                updateClearBtn();
+
+                setTimeout(() => {
+                    if (callback) callback();
+                }, 200);
+            }
+
+            function spawnBurstParticles() {
+                const layer = particleBurstLayer;
+                const rect = resultInner.getBoundingClientRect();
+                const layerRect = resultOuterWrapper.getBoundingClientRect();
+                const offsetX = rect.left - layerRect.left;
+                const offsetY = rect.top - layerRect.top;
+                const centerX = offsetX + rect.width / 2;
+                const centerY = offsetY + rect.height / 2;
+                const spreadRadius = Math.max(rect.width, rect.height) * 0.8;
+                const count = 28;
+                const fragment = document.createDocumentFragment();
+
+                for (let i = 0; i < count; i++) {
+                    const particle = document.createElement('div');
+                    particle.classList.add('burst-particle');
+                    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+                    const distance = spreadRadius * (0.4 + Math.random() * 0.8);
+                    const dx = Math.cos(angle) * distance;
+                    const dy = Math.sin(angle) * distance;
+                    const rot = (Math.random() - 0.5) * 360 * 2;
+                    const size = 3 + Math.random() * 7;
+                    const hue = isErrorState ? 10 : (Math.random() < 0.5 ? 155 : 180);
+
+                    particle.style.cssText = `
+                        left: ${centerX}px;
+                        top: ${centerY}px;
+                        width: ${size}px;
+                        height: ${size}px;
+                        background: hsl(${hue}, ${isErrorState ? '70%' : '50%'}, ${isErrorState ? '60%' : (55 + Math.random() * 30)}%);
+                        --dx: ${dx}px;
+                        --dy: ${dy}px;
+                        --rot: ${rot}deg;
+                        animation-duration: ${0.5 + Math.random() * 0.5}s;
+                        box-shadow: 0 0 ${4 + Math.random()*6}px hsl(${hue}, ${isErrorState ? '70%' : '60%'}, ${isErrorState ? '55%' : '65%'});
+                    `;
+                    fragment.appendChild(particle);
+                }
+
+                layer.appendChild(fragment);
+                setTimeout(() => {
+                    layer.innerHTML = '';
+                }, 800);
+            }
+
+            function updateClearBtn() {
+                const hasContent = inputField.value.trim().length > 0;
+                if (hasContent) {
+                    clearBtn.classList.add('visible');
+                } else {
+                    clearBtn.classList.remove('visible');
+                }
+            }
+
+            function switchMode(mode) {
+                if (mode === currentMode) return;
+
+                currentMode = mode;
+                formatBtn.classList.toggle('active', mode === 'format');
+                compressBtn.classList.toggle('active', mode === 'compress');
+
+                inputField.placeholder = mode === 'format' ?
+                    '输入JSON字符串，按回车美化...' :
+                    '输入JSON字符串，按回车压缩...';
+
+                const content = getInputContent();
+                if (content && isResultVisible) {
+                    showResult(content);
+                } else if (content && !isResultVisible) {
+                    showResult(content);
+                }
+            }
+
+            // 事件监听
+            formatBtn.addEventListener('click', () => switchMode('format'));
+            compressBtn.addEventListener('click', () => switchMode('compress'));
+
+            clearBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                inputField.value = '';
+                updateClearBtn();
+                if (isResultVisible) {
+                    hideResult();
+                }
+            });
+
+            inputField.addEventListener('input', () => {
+                updateClearBtn();
+                if (isResultVisible && resultGlowPulse.classList.contains('active')) {
+                    resultGlowPulse.style.animation = 'none';
+                    void resultGlowPulse.offsetWidth;
+                    if (isErrorState) {
+                        resultGlowPulse.style.animation = 'glowBreatheError 3s ease-in-out infinite';
+                        resultGlowPulse.style.boxShadow =
+                            '0 0 50px 16px rgba(255,140,130,0.6), 0 0 90px 30px rgba(255,110,100,0.4)';
+                    } else {
+                        resultGlowPulse.style.animation = 'glowBreathe 3s ease-in-out infinite';
+                        resultGlowPulse.style.boxShadow =
+                            '0 0 50px 16px rgba(100,210,170,0.6), 0 0 90px 30px rgba(100,180,150,0.4)';
+                    }
+                    setTimeout(() => {
+                        resultGlowPulse.style.boxShadow = '';
+                    }, 350);
+                }
+            });
+
+            inputField.addEventListener('focus', () => {
+                updateClearBtn();
+            });
+
+            inputField.addEventListener('blur', () => {
+                const content = getInputContent();
+                if (content) {
+                    showResult(content);
+                } else if (isResultVisible) {
+                    hideResult();
+                }
+                updateClearBtn();
+            });
+
+            // 回车键直接触发处理（与参考代码行为完全一致）
+            inputField.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    inputField.blur(); // 失焦，blur事件会自动调用showResult
+                }
+                if (e.key === 'Escape' && inputField.value.trim()) {
+                    inputField.value = '';
+                    updateClearBtn();
+                    if (isResultVisible) {
+                        hideResult();
+                    }
+                }
+            });
+
+            inputField.addEventListener('paste', () => {
+                setTimeout(() => {
+                    updateClearBtn();
+                    const content = getInputContent();
+                    if (content) {
+                        showResult(content);
+                    }
+                }, 50);
+            });
+
+            copyBtn.addEventListener('click', async () => {
+                if (!currentResult) return;
+
+                try {
+                    await navigator.clipboard.writeText(currentResult);
+                    copyBtn.textContent = '复制成功';
+                    copyBtn.classList.add('copied');
+
+                    setTimeout(() => {
+                        copyBtn.textContent = '复制结果';
+                        copyBtn.classList.remove('copied');
+                    }, 2000);
+                } catch (e) {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = currentResult;
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                    copyBtn.textContent = '复制成功';
+                    copyBtn.classList.add('copied');
+
+                    setTimeout(() => {
+                        copyBtn.textContent = '复制结果';
+                        copyBtn.classList.remove('copied');
+                    }, 2000);
+                }
+            });
+
+            console.log('%c✨ JSON格式化/压缩器已就绪 (Enter键快速转换)',
+                'color: #80f0c0; font-size: 1.1em;');
+            console.log('%c💡 提示：粘贴JSON自动处理 | 按Enter键显示结果 | Escape清空内容',
+                'color: #a0d8c0; font-size: 0.9em;');
+            console.log('%c🎨 支持美化（缩进）和压缩（去空格）两种模式',
+                'color: #80d0b8; font-size: 0.85em;');
+        })();
+    </script>
+</body>
+</html>

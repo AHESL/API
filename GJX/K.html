@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>海龟汤 · AI推理工坊</title>
+    <style>
+        /* ---------- 基础变量与浅色主题（默认） ---------- */
+        @font-face {
+            font-family: 'ZWFont';
+            src: url('../zw.ttf') format('truetype');
+            font-display: swap;
+            /* 仅作用于中文汉字 */
+            unicode-range: U+4E00-U+9FA5;
+        }
+        @font-face {
+            font-family: 'YWFont';
+            src: url('../yw.ttf') format('truetype');
+            font-display: swap;
+            /* 英文、数字、标点、符号 */
+            unicode-range: U+0000-U+007F, U+FF00-U+FFEF;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            /* 优先级：中文字体 > 西文字体 > 兜底系统字体 */
+            font-family: 'YWFont', 'ZWFont', 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            background: #f5f5f7;   /* 浅色背景 */
+            color: #1e1e2a;        /* 深色文字 */
+            transition: background 0.2s, color 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .app {
+            width: 100%;
+            max-width: 520px;
+            height: 100vh;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 40px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            transition: background 0.2s;
+        }
+
+        @media (min-width: 520px) {
+            .app {
+                border-radius: 24px;
+                height: 92vh;
+                margin: 20px;
+            }
+        }
+
+        .card {
+            background: #f0f0f2;
+            border-radius: 18px;
+            padding: 18px;
+            margin: 12px 16px;
+            border: 1px solid #ddd;
+            transition: background 0.2s, border 0.2s;
+        }
+
+        .param-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 16px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .param-panel h2 {
+            text-align: center;
+            color: #b33a2c;
+            font-size: 26px;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+
+        .choice-group .label {
+            font-size: 13px;
+            color: #5a5a6e;
+            letter-spacing: 0.8px;
+            margin-bottom: 2px;
+        }
+
+        .choice-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .choice-btn {
+            padding: 9px 16px;
+            border-radius: 20px;
+            background: #e8e8ec;
+            border: 1px solid #ccc;
+            color: #2c2c3a;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+            user-select: none;
+        }
+
+        .choice-btn.selected {
+            background: #b33a2c;
+            border-color: #c0392b;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .choice-btn:active {
+            background: #d0d0d8;
+        }
+
+        .choice-btn.selected:active {
+            background: #9e2a1e;
+        }
+
+        .choice-btn.danger {
+            border-color: #c05a4a;
+        }
+
+        .start-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 28px;
+            background: #c0392b;
+            border: none;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+
+        .start-btn:active {
+            background: #a93226;
+        }
+
+        .loading-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            color: #6c6c80;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #ddd;
+            border-top-color: #c0392b;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .mode-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 32px;
+            padding: 30px;
+        }
+
+        .mode-panel h3 {
+            color: #b33a2c;
+            font-size: 20px;
+        }
+
+        .mode-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .mode-card {
+            flex: 1 1 180px;
+            background: #f0f0f2;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .mode-card:active {
+            background: #e4e4e8;
+        }
+
+        .mode-card .icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .mode-card .mode-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e1e2a;
+            margin-bottom: 6px;
+        }
+
+        .mode-card .mode-desc {
+            font-size: 13px;
+            color: #7a7a8a;
+        }
+
+        .soup-card {
+            background: #f0f0f2;
+            margin: 12px 16px 6px;
+            padding: 18px;
+            border-radius: 16px;
+            border-left: 4px solid #c0392b;
+            flex-shrink: 0;
+        }
+
+        .soup-text {
+            font-size: 17px;
+            line-height: 1.6;
+            color: #1e1e2a;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 10px;
+        }
+
+        .soup-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: #ddd;
+            color: #3a3a4a;
+        }
+
+        .tag.red {
+            background: #e8b4b4;
+            color: #a03322;
+        }
+
+        .tag.black {
+            background: #ccc;
+            color: #111;
+        }
+
+        .tag.clear {
+            background: #c5e0f0;
+            color: #1a5a7a;
+        }
+
+        .tag.warning {
+            background: #f0d8a0;
+            color: #8a5a1a;
+        }
+
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .bubble {
+            max-width: 85%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.5;
+            word-break: break-word;
+            animation: fadeUp 0.2s ease;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bubble.user {
+            background: #cfe4ff;
+            color: #1a2a3a;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bubble.ai {
+            background: #f0d0d0;
+            color: #a03030;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            font-weight: 500;
+        }
+
+        .bubble.system {
+            background: #e8e8ec;
+            color: #6a6a7a;
+            align-self: center;
+            font-size: 13px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        .input-bar {
+            background: #f5f5f7;
+            padding: 10px 16px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border-top: 1px solid #ddd;
+            flex-shrink: 0;
+        }
+
+        .input-bar input {
+            flex: 1;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 24px;
+            padding: 12px 16px;
+            color: #1e1e2a;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .input-bar input:focus {
+            border-color: #c0392b;
+        }
+
+        .text-btn {
+            background: #e8e8ec;
+            border: none;
+            color: #2c2c3a;
+            font-size: 14px;
+            padding: 10px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .text-btn:active {
+            background: #d0d0d8;
+        }
+
+        .copy-inline {
+            display: block;
+            margin-left: auto;
+            background: #ddd;
+            border: none;
+            color: #2c2c3a;
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: 0.2s;
+        }
+
+        .copy-inline:active {
+            background: #ccc;
+        }
+
+        .showcase {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .showcase .copy-btn {
+            background: #e8e8ec;
+            border: 1px solid #ccc;
+            color: #2c2c3a;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            align-self: center;
+        }
+
+        .showcase .copy-btn:active {
+            background: #d0d0d8;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .enter-hint {
+            text-align: center;
+            font-size: 12px;
+            color: #8a8a9a;
+            margin-top: 4px;
+        }
+
+        /* ---------- 深色模式（dark-mode）覆盖 ---------- */
+        body.dark-mode {
+            background: #121217;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .app {
+            background: #1a1a22;
+            box-shadow: 0 0 40px rgba(0,0,0,0.7);
+        }
+
+        body.dark-mode .card {
+            background: #24242e;
+            border-color: #333;
+        }
+
+        body.dark-mode .param-panel h2 {
+            color: #f0d9b5;
+        }
+
+        body.dark-mode .choice-group .label {
+            color: #aaa;
+        }
+
+        body.dark-mode .choice-btn {
+            background: #2a2a35;
+            border-color: #3a3a45;
+            color: #ccc;
+        }
+
+        body.dark-mode .choice-btn.selected {
+            background: #b33a2c;
+            border-color: #c0392b;
+            color: #fff;
+        }
+
+        body.dark-mode .choice-btn:active {
+            background: #3a3a48;
+        }
+
+        body.dark-mode .choice-btn.danger {
+            border-color: #a0402a;
+        }
+
+        body.dark-mode .soup-card {
+            background: #24242e;
+            border-left-color: #c0392b;
+        }
+
+        body.dark-mode .soup-text {
+            color: #f0d9b5;
+        }
+
+        body.dark-mode .tag {
+            background: #3a3a44;
+            color: #ccc;
+        }
+
+        body.dark-mode .tag.red {
+            background: #6b2c2c;
+            color: #f5c6c6;
+        }
+
+        body.dark-mode .tag.black {
+            background: #1f1f1f;
+            color: #aaa;
+        }
+
+        body.dark-mode .tag.clear {
+            background: #2c3e50;
+            color: #a6d9f7;
+        }
+
+        body.dark-mode .tag.warning {
+            background: #553a1a;
+            color: #f0c060;
+        }
+
+        body.dark-mode .bubble.user {
+            background: #2b5278;
+            color: #fff;
+        }
+
+        body.dark-mode .bubble.ai {
+            background: #371818;
+            color: #e07070;
+        }
+
+        body.dark-mode .bubble.system {
+            background: #1e1e26;
+            color: #aaa;
+        }
+
+        body.dark-mode .input-bar {
+            background: #1f1f28;
+            border-top-color: #333;
+        }
+
+        body.dark-mode .input-bar input {
+            background: #121217;
+            border-color: #3a3a44;
+            color: #fff;
+        }
+
+        body.dark-mode .text-btn {
+            background: #2a2a35;
+            color: #ddd;
+        }
+
+        body.dark-mode .text-btn:active {
+            background: #3a3a48;
+        }
+
+        body.dark-mode .copy-inline {
+            background: #333;
+            color: #ddd;
+        }
+
+        body.dark-mode .copy-inline:active {
+            background: #555;
+        }
+
+        body.dark-mode .showcase .copy-btn {
+            background: #2a2a35;
+            border-color: #444;
+            color: #ddd;
+        }
+
+        body.dark-mode .showcase .copy-btn:active {
+            background: #3a3a48;
+        }
+
+        body.dark-mode .enter-hint {
+            color: #888;
+        }
+
+        body.dark-mode .mode-card {
+            background: #24242e;
+            border-color: #3a3a44;
+        }
+
+        body.dark-mode .mode-card .mode-title {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .mode-card .mode-desc {
+            color: #888;
+        }
+
+        body.dark-mode .mode-panel h3 {
+            color: #f0d9b5;
+        }
+/* ---------- 自定义弹窗样式 ---------- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px 22px;
+            max-width: 400px;
+            width: 85%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            transform: scale(0.9);
+            transition: transform 0.5s ease, background 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .modal-overlay.show .modal-card {
+            transform: scale(1);
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .modal-message {
+            color: #475569;
+            margin-bottom: 24px;
+            line-height: 1.5;
+            font-size: 15px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        .modal-btn {
+            padding: 10px 22px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+        }
+        .modal-btn.confirm {
+            background: #c0392b;
+            color: white;
+        }
+        .modal-btn.confirm:active {
+            transform: scale(0.95);
+        }
+        /* 以下为 Toast 提示样式（必须保留） */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+        }
+        .toast {
+            display: inline-block;
+            background: #c0392b;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            backdrop-filter: blur(4px);
+            animation: toastFadeIn 0.25s ease forwards;
+        }
+        body.dark-mode .toast {
+            background: #e05a4a;
+            color: white;
+        }
+        @keyframes toastFadeIn {
+            0% { opacity: 0; transform: translateY(-20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toastFadeOut {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+<div class="app" id="app">
+    <!-- 参数面板 -->
+    <div class="param-panel" id="paramPanel">
+        <h2>🍲 熬一碗海龟汤</h2>
+        <div class="choice-group" id="realityGroup"><div class="label">现实性</div><div class="choice-row"><div class="choice-btn selected" data-value="本格">本格</div><div class="choice-btn" data-value="变格">变格</div></div></div>
+        <div class="choice-group" id="casualtyGroup"><div class="label">伤亡与重口等级</div><div class="choice-row"><div class="choice-btn selected" data-value="清汤">清汤</div><div class="choice-btn" data-value="胡辣汤">胡辣汤</div><div class="choice-btn" data-value="鸳鸯汤">鸳鸯汤</div><div class="choice-btn" data-value="红汤">红汤</div><div class="choice-btn danger" data-value="黑汤">黑汤🔥</div></div></div>
+        <div class="choice-group" id="logicGroup"><div class="label">汤底逻辑类型（可多选）</div><div class="choice-row" id="logicRow"><div class="choice-btn selected" data-value="无" id="logicNoneBtn">无</div><div class="choice-btn" data-value="身份认知错位">身份认知错位</div><div class="choice-btn" data-value="时间跨度误判">时间跨度误判</div><div class="choice-btn" data-value="因果倒置">因果倒置</div><div class="choice-btn" data-value="行为动机偷换">行为动机偷换</div><div class="choice-btn" data-value="视角欺诈">视角欺诈</div><div class="choice-btn" data-value="日常物异化">日常物异化</div><div class="choice-btn" data-value="隐藏的食人/寄生/病态保存">食人/寄生/保存</div><div class="choice-btn" data-value="表面温馨实为恐怖">表面温馨实为恐怖</div></div></div>
+        <div class="choice-group" id="difficultyGroup"><div class="label">难度</div><div class="choice-row"><div class="choice-btn selected" data-value="简单">简单</div><div class="choice-btn" data-value="中等">中等</div><div class="choice-btn" data-value="超难">超难</div><div class="choice-btn danger" data-value="地狱级">地狱级🔥</div></div></div>
+        <div class="choice-group" id="timeGroup"><div class="label">时序混乱程度</div><div class="choice-row"><div class="choice-btn selected" data-value="正常叙事">正常叙事</div><div class="choice-btn" data-value="轻度倒叙">轻度倒叙</div><div class="choice-btn" data-value="重度碎片化">重度碎片化</div><div class="choice-btn" data-value="彻底癫狂">彻底癫狂</div></div></div>
+        <div class="choice-group" id="noiseGroup"><div class="label">干扰项</div><div class="choice-row"><div class="choice-btn selected" data-value="无">无</div><div class="choice-btn" data-value="1-2个">1-2个</div><div class="choice-btn" data-value="3-4个">3-4个</div><div class="choice-btn" data-value="大量自相矛盾的细节">大量矛盾细节</div></div></div>
+        <div class="choice-group" id="perspectiveGroup"><div class="label">视角</div><div class="choice-row"><div class="choice-btn selected" data-value="单一视角">单一视角</div><div class="choice-btn" data-value="双视角无标注">双视角无标注</div><div class="choice-btn" data-value="多视角碎片交织">多视角碎片交织</div></div></div>
+        <div class="choice-group" id="layersGroup"><div class="label">汤底层次</div><div class="choice-row"><div class="choice-btn selected" data-value="单层真相">单层真相</div><div class="choice-btn" data-value="双层反转">双层反转</div></div></div>
+        <button class="start-btn" id="startCookingBtn">开始熬汤</button>
+    </div>
+
+    <!-- 加载 -->
+    <div class="loading-panel hidden" id="loadingPanel"><div class="spinner"></div><span>正在熬制浓汤，请稍候...</span></div>
+
+    <!-- 模式选择 -->
+    <div class="mode-panel hidden" id="modePanel">
+        <h3>🍲 汤已熬好，请选择食用方式</h3>
+        <div class="mode-cards">
+            <div class="mode-card" id="modeShowBtn"><div class="icon">📋</div><div class="mode-title">完整展示</div><div class="mode-desc">查看汤面+汤底，拿去和朋友玩</div></div>
+            <div class="mode-card" id="modePlayBtn"><div class="icon">💬</div><div class="mode-title">AI 主持</div><div class="mode-desc">与AI一起盘问，猜出真相</div></div>
+        </div>
+    </div>
+
+    <!-- 完整展示 -->
+    <div class="showcase hidden" id="showcasePanel">
+        <div class="soup-card"><div class="soup-text" id="showSoupText"></div><div class="soup-tags" id="showSoupTags"></div><button class="copy-inline" data-target="showSoupText">复制全文</button></div>
+        <div class="card"><div style="color:#b33a2c; font-weight:bold;">📊 汤底信息</div><div id="showMeta" style="font-size:14px;"></div><button class="copy-inline" data-target="showMeta">复制全文</button></div>
+        <div class="card"><div style="color:#b33a2c; font-weight:bold;">🔍 完整汤底</div><div id="showFullBase" style="font-size:15px; white-space:pre-wrap;"></div><button class="copy-inline" data-target="showFullBase">复制全文</button></div>
+        <button class="copy-btn" id="backToConfigFromShow">↩️返回熬汤</button>
+    </div>
+
+    <!-- AI主持界面 -->
+    <div class="hidden" id="gamePanel" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+        <div class="soup-card"><div class="soup-text" id="gameSoupText"></div><div class="soup-tags" id="gameSoupTags"></div></div>
+        <div class="counters" id="counterDisplay">提问次数: -- | 提示次数: --</div>
+        <div class="chat-area" id="chatArea"></div>
+        <div class="enter-hint">回车发送消息（😘玩得开心呀🥰）</div>
+        <div class="input-bar" id="inputBar"><input type="text" id="userInput" placeholder="输入你的问题..." autocomplete="off"></div>
+        <div style="display:flex; gap:8px; justify-content:center; padding:8px 16px 16px;" id="gameActions">
+            <button class="text-btn" id="hintBtn">索要提示</button>
+            <button class="text-btn" id="revealBtn">揭晓答案</button>
+        </div>
+        <button class="text-btn hidden" id="backToConfigFromGame" style="margin:8px 16px 16px; align-self:center;">↩️ 返回熬汤</button>
+    </div>
+</div>
+
+<!-- Toast 容器 -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    (function() {
+        // ========== Toast 系统 ==========
+        let toastTimer = null;
+        let currentToast = null;
+
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            if (currentToast) {
+                currentToast.remove();
+                currentToast = null;
+            }
+            if (toastTimer) clearTimeout(toastTimer);
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            container.appendChild(toast);
+            currentToast = toast;
+            toastTimer = setTimeout(() => {
+                if (currentToast === toast) {
+                    toast.style.animation = 'toastFadeOut 0.2s ease forwards';
+                    toast.addEventListener('animationend', () => {
+                        if (toast.parentNode) toast.remove();
+                        if (currentToast === toast) currentToast = null;
+                    }, { once: true });
+                    toastTimer = null;
+                }
+            }, 2000);
+        }
+
+// ========== 主题跟随工具箱 ==========
+        function applyTheme() {
+            var toolboxTheme = localStorage.getItem('toolbox_theme');
+            var isDark = false;
+            if (toolboxTheme === 'glass' || toolboxTheme === 'neon') {
+                isDark = true;
+            } else if (toolboxTheme === 'milk' || toolboxTheme === 'candy') {
+                isDark = false;
+            } else {
+                isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            }
+            if (isDark) document.body.classList.add('dark-mode');
+            else document.body.classList.remove('dark-mode');
+        }
+        applyTheme();
+        if (window.matchMedia) {
+            var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            mediaQuery.addEventListener('change', function() {
+                applyTheme();
+            });
+        }
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'toolbox_theme') applyTheme();
+        });
+        // ========== API 相关变量 ==========
+        const API_KEY = localStorage.getItem('deepseek_api_key');
+        const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+        const MODEL = 'deepseek-chat';
+
+        let currentParams = {};
+        let soupText = '';
+        let soupBase = '';
+        let fullMeta = '';
+        let maxQuestions = 8;
+        let maxHints = 2;
+        let questionsLeft = 0;
+        let hintsLeft = 0;
+        let gameActive = false;
+        let conversationHistory = [];
+
+        // DOM 元素
+        const paramPanel = document.getElementById('paramPanel');
+        const loadingPanel = document.getElementById('loadingPanel');
+        const modePanel = document.getElementById('modePanel');
+        const showcasePanel = document.getElementById('showcasePanel');
+        const gamePanel = document.getElementById('gamePanel');
+        const chatArea = document.getElementById('chatArea');
+        const userInput = document.getElementById('userInput');
+        const inputBar = document.getElementById('inputBar');
+        const gameActions = document.getElementById('gameActions');
+        const backToConfigFromGame = document.getElementById('backToConfigFromGame');
+        const counterDisplay = document.getElementById('counterDisplay');
+        const hintBtn = document.getElementById('hintBtn');
+        const revealBtn = document.getElementById('revealBtn');
+
+        function updateCountersUI() {
+            counterDisplay.innerText = `提问次数: ${questionsLeft} | 提示次数: ${hintsLeft}`;
+            if (hintBtn) hintBtn.disabled = !(gameActive && questionsLeft > 0 && hintsLeft > 0);
+        }
+
+        function addChatBubble(role, text) {
+            const bubble = document.createElement('div');
+            bubble.className = `bubble ${role}`;
+            bubble.textContent = text;
+            chatArea.appendChild(bubble);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function endGame() {
+            gameActive = false;
+            if (userInput) userInput.disabled = true;
+            if (inputBar) inputBar.classList.add('hidden');
+            if (gameActions) gameActions.classList.add('hidden');
+            if (backToConfigFromGame) backToConfigFromGame.classList.remove('hidden');
+            addChatBubble('system', '游戏已结束');
+        }
+
+        async function callDeepSeek(messages) {
+            if (!API_KEY) { showToast('请先设置 API Key'); return null; }
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+                    body: JSON.stringify({ model: MODEL, messages, temperature: 0.7, max_tokens: 2000 })
+                });
+                if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || `请求失败 ${res.status}`); }
+                const data = await res.json();
+                return data.choices[0].message.content;
+            } catch (e) {
+                let errorMsg = e.message;
+                if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+                    errorMsg = '网络未连接';
+                } else if (errorMsg.includes('401')) {
+                    errorMsg = 'API Key 无效，请检查设置';
+                } else if (errorMsg.includes('403')) {
+                    errorMsg = '访问被拒绝，请检查 API Key 权限';
+                } else if (errorMsg.includes('404')) {
+                    errorMsg = '请求地址错误';
+                } else if (errorMsg.includes('429')) {
+                    errorMsg = '请求过于频繁，请稍后再试';
+                } else if (errorMsg.includes('500')) {
+                    errorMsg = '服务器错误，请稍后重试';
+                } else if (errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
+                    errorMsg = '请求超时，请检查网络后重试';
+                } else if (errorMsg.includes('JSON') || errorMsg.includes('parse')) {
+                    errorMsg = '数据解析失败，请重试';
+                } else if (errorMsg.includes('abort') || errorMsg.includes('Abort')) {
+                    errorMsg = '请求已取消';
+                } else {
+                    errorMsg = 'API 错误:' + errorMsg;
+                }
+                showToast(errorMsg);
+                return null;
+            }
+        }
+
+        function buildCreationPrompt(params) {
+            return `【角色设定】你是海龟汤大师。根据以下参数生成海龟汤（汤面+汤底）。汤底需完整且符合逻辑。
+【基础规则】
+1.按「现实/不现实」分：本格 / 变格
+本格：现实里真能发生，纯逻辑，没有鬼、超能力
+变格：现实不可能，有鬼、穿越、超能力、怪谈
+2.按「死人多少/重口程度」分：清汤 / 胡辣汤 / 鸳鸯汤 / 红汤 / 黑汤
+清汤：没人死，轻松、日常、搞笑、治愈
+红汤：有人死（1个或少数），带点悬疑、血腥、谋杀
+黑汤：死很多人 / 全死 / 重口味 / 极恐怖
+胡辣汤：有人受伤、见血，但没死
+鸳鸯汤：濒死、生死未卜
+3.基础术语
+汤面：谜面（诡异短故事）
+汤底：真相、答案
+【核心参数】
+现实性：${params.reality}
+伤亡重口等级：${params.casualty}
+汤底逻辑类型：${params.logic.join(' / ')}
+难度：${params.difficulty}
+时序混乱程度：${params.timeChaos}
+干扰项：${params.noise}
+视角：${params.perspective}
+汤底层次：${params.layers}
+【输出要求】严格输出JSON，不要额外解释：
+{
+  "soupText": "汤面内容",
+  "soupBase": "完整汤底（若双层反转，包含表面解释和深层真相）",
+  "meta": "简要说明：难度、类型等",
+  "maxQuestions": 8,
+  "maxHints": 2
+}`;
+        }
+
+        function buildGameMasterPrompt(baseData, qLeft, hLeft) {
+            return `你是严厉的海龟汤主持人。汤底："""${baseData}"""。
+规则：
+1. 每次回复必须输出JSON，格式：{"reply": "自然语言回复", "questions_left": 数字, "hints_left": 数字, "status": "ongoing"或"ended"}
+2. 你内部维护两个计数器：提问次数和提示次数。当前状态：提问剩余 ${qLeft}，提示剩余 ${hLeft}+1。
+3. 用户发送普通消息（不是"__HINT__"也不是"__REVEAL__"）：
+   - 必须是针对汤面的有效提问（与案情相关），回答只能从【是/否/无关/重要/不重要】中选择，不能给出任何解释或提示。
+   - 如果提问次数已经是0 → 回复“提问次数已用完，请直接猜测答案或点击揭晓答案”，不扣次数，questions_left保持0。
+   - 如果内容以“我猜”开头（猜测答案） → 不扣次数，判断相似度，若≥65%则输出汤底并status="ended"；否则记录一次错误猜测，三次错误则结束。
+4. 用户发送"__HINT__"（索要提示）：
+   - 仅当提问次数>0且提示次数>0时，提示次数减1，然后给出一个简短、不泄露答案的提示（例如一个方向或一个相关物证）。
+   - 如果提示次数==0，回复“提示次数已用完”，不扣。
+   - 如果提问次数==0，回复“提问次数已用完，无法索要提示”，不扣。
+5. 用户发送"__REVEAL__"（揭晓答案） → 输出完整汤底，status="ended"。
+6. 游戏一旦status="ended"，不再接受任何消息。
+7. 回答单个文字时尽量不要使用标点符号超过一个中文字后即可使用
+8. 每次输出JSON必须准确更新questions_left和hints_left。
+9. 除了必要的规则性回复外，不要添加任何额外信息，尤其是不要泄露汤底相关内容。`;
+        }
+
+        async function sendToGame(content, isHint = false, isReveal = false) {
+            if (!gameActive) return;
+            if (isReveal) {
+                const msgs = [{ role: 'system', content: buildGameMasterPrompt(soupBase, questionsLeft, hintsLeft) }, ...conversationHistory.slice(-10), { role: 'user', content: '__REVEAL__' }];
+                const reply = await callDeepSeek(msgs);
+                if (reply) {
+                    try {
+                        let clean = reply.replace(/```json|```/g, '').trim();
+                        const json = JSON.parse(clean);
+                        addChatBubble('ai', json.reply);
+                        if (json.status === 'ended') endGame();
+                        else endGame();
+                    } catch (e) { addChatBubble('ai', reply); endGame(); }
+                }
+                return;
+            }
+            let userMsg = content;
+            if (isHint) userMsg = '__HINT__';
+            conversationHistory.push({ role: 'user', content: userMsg });
+            const msgs = [{ role: 'system', content: buildGameMasterPrompt(soupBase, questionsLeft, hintsLeft) }, ...conversationHistory.slice(-10)];
+            const reply = await callDeepSeek(msgs);
+            if (!reply) return;
+            try {
+                let clean = reply.replace(/```json|```/g, '').trim();
+                const json = JSON.parse(clean);
+                addChatBubble('ai', json.reply);
+                if (json.questions_left !== undefined) questionsLeft = json.questions_left;
+                if (json.hints_left !== undefined) hintsLeft = json.hints_left;
+                updateCountersUI();
+                if (json.status === 'ended') endGame();
+                conversationHistory.push({ role: 'assistant', content: reply });
+            } catch (e) {
+                addChatBubble('ai', reply);
+                console.error("JSON解析失败", e);
+                showToast('AI 返回格式异常，请重试');
+            }
+        }
+
+        async function processInput() {
+            if (!gameActive) return;
+            const msg = userInput.value.trim();
+            if (!msg) return;
+            const isGuess = msg.startsWith('我猜');
+            if (!isGuess && questionsLeft <= 0) {
+                addChatBubble('system', '提问次数已用完，请直接猜测答案（以“我猜”开头）或点击揭晓答案。');
+                return;
+            }
+            addChatBubble('user', msg);
+            userInput.value = '';
+            await sendToGame(msg, false, false);
+        }
+
+        async function requestHint() {
+            if (!gameActive) return;
+            if (questionsLeft <= 0) { addChatBubble('system', '提问次数已用完，无法索要提示。'); return; }
+            if (hintsLeft <= 0) { addChatBubble('system', '提示次数已用完。'); return; }
+            addChatBubble('user', '【索要提示】');
+            await sendToGame('', true, false);
+        }
+
+        async function revealAnswer() {
+            if (!gameActive) return;
+            addChatBubble('user', '【揭晓答案】');
+            await sendToGame('', false, true);
+        }
+
+        // 初始化多选逻辑
+        function initChoiceGroups() {
+            document.querySelectorAll('.choice-group .choice-row').forEach(row => {
+                const isMulti = row.id === 'logicRow';
+                row.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.choice-btn');
+                    if (!btn) return;
+                    if (isMulti) {
+                        if (btn.dataset.value === '无') {
+                            row.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+                            btn.classList.add('selected');
+                        } else {
+                            document.getElementById('logicNoneBtn').classList.remove('selected');
+                            btn.classList.toggle('selected');
+                        }
+                    } else {
+                        row.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                    }
+                });
+            });
+        }
+
+        function collectParams() {
+            const getSelected = (groupId) => {
+                const row = document.getElementById(groupId).querySelector('.choice-row');
+                return Array.from(row.querySelectorAll('.choice-btn.selected')).map(b => b.dataset.value);
+            };
+            const logic = getSelected('logicGroup');
+            return {
+                reality: getSelected('realityGroup')[0],
+                casualty: getSelected('casualtyGroup')[0],
+                logic: logic.length ? logic : ['无'],
+                difficulty: getSelected('difficultyGroup')[0],
+                timeChaos: getSelected('timeGroup')[0],
+                noise: getSelected('noiseGroup')[0],
+                perspective: getSelected('perspectiveGroup')[0],
+                layers: getSelected('layersGroup')[0]
+            };
+        }
+
+        function showPanel(panel) {
+            [paramPanel, loadingPanel, modePanel, showcasePanel, gamePanel].forEach(p => p.classList.add('hidden'));
+            panel.classList.remove('hidden');
+        }
+
+        function fillSoupCard(textEl, tagsEl, text, params) {
+            textEl.textContent = text;
+            tagsEl.innerHTML = '';
+            const addTag = (label, cls = '') => {
+                const span = document.createElement('span');
+                span.className = `tag ${cls}`;
+                span.textContent = label;
+                tagsEl.appendChild(span);
+            };
+            addTag(params.reality);
+            addTag(params.casualty, (params.casualty === '红汤' || params.casualty === '黑汤') ? 'red' : 'clear');
+            addTag(params.difficulty, params.difficulty === '地狱级' ? 'warning' : '');
+            addTag(params.timeChaos);
+            addTag(params.perspective);
+            if (params.layers === '双层反转') addTag('双层反转');
+        }
+
+        // 开始熬汤按钮事件（加入网络和 API Key 检查）
+        document.getElementById('startCookingBtn').addEventListener('click', async () => {
+            currentParams = collectParams();
+            if (currentParams.logic.length === 0) { showToast('请至少选择一种逻辑类型'); return; }
+            // 网络检查
+            if (!navigator.onLine) { showToast('网络未连接，请检查网络'); return; }
+            // API Key 检查
+            if (!API_KEY) { showToast('请先设置 API Key'); return; }
+            showPanel(loadingPanel);
+            const prompt = buildCreationPrompt(currentParams);
+            const result = await callDeepSeek([{ role: 'user', content: prompt }]);
+            if (!result) { showPanel(paramPanel); return; }
+            try {
+                let jsonStr = result.replace(/```json|```/g, '').trim();
+                const data = JSON.parse(jsonStr);
+                soupText = data.soupText || '汤面缺失';
+                soupBase = data.soupBase || '汤底缺失';
+                fullMeta = data.meta || '';
+                maxQuestions = data.maxQuestions || 8;
+                maxHints = data.maxHints || 2;
+            } catch (e) {
+                const lines = result.split('\n').filter(l => l.trim());
+                soupText = lines[0] || '汤面缺失';
+                soupBase = lines.slice(1).join('\n') || '汤底缺失';
+                fullMeta = '解析失败';
+                maxQuestions = 8;
+                maxHints = 2;
+                showToast('解析错误，已使用默认汤面');
+            }
+            showPanel(modePanel);
+        });
+
+        document.getElementById('modeShowBtn').addEventListener('click', () => {
+            document.getElementById('showSoupText').textContent = soupText;
+            fillSoupCard(document.getElementById('showSoupText'), document.getElementById('showSoupTags'), soupText, currentParams);
+            document.getElementById('showFullBase').textContent = soupBase;
+            document.getElementById('showMeta').innerHTML = `难度：${currentParams.difficulty} | 类型：${currentParams.casualty} | ${currentParams.reality}<br>逻辑：${currentParams.logic.join('、')}<br>时序：${currentParams.timeChaos} | 干扰：${currentParams.noise} | 视角：${currentParams.perspective}<br>汤底层次：${currentParams.layers}<br>${fullMeta ? '📝 ' + fullMeta : ''}`;
+            showPanel(showcasePanel);
+        });
+
+        document.getElementById('modePlayBtn').addEventListener('click', () => {
+            chatArea.innerHTML = '';
+            conversationHistory = [];
+            questionsLeft = maxQuestions;
+            hintsLeft = maxHints;
+            gameActive = true;
+            updateCountersUI();
+            fillSoupCard(document.getElementById('gameSoupText'), document.getElementById('gameSoupTags'), soupText, currentParams);
+            addChatBubble('ai', '汤面：' + soupText);
+            addChatBubble('system', `游戏开始！提问次数 ${maxQuestions}次,提示次数 ${maxHints}次`);
+            userInput.disabled = false;
+            inputBar.classList.remove('hidden');
+            gameActions.classList.remove('hidden');
+            backToConfigFromGame.classList.add('hidden');
+            showPanel(gamePanel);
+            userInput.focus();
+        });
+
+        document.getElementById('backToConfigFromShow').addEventListener('click', () => showPanel(paramPanel));
+        backToConfigFromGame.addEventListener('click', () => showPanel(paramPanel));
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); processInput(); userInput.blur(); } });
+        hintBtn.addEventListener('click', requestHint);
+        revealBtn.addEventListener('click', revealAnswer);
+
+        // 复制功能（保持原有逻辑不变，仅将 alert 改为 showToast）
+        document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.copy-inline');
+    if (!btn) return;
+    const targetId = btn.dataset.target;
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    const text = el.innerText || el.textContent;
+
+    async function copyText() {
+        if (navigator.clipboard && window.isSecureContext) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (err) {
+                console.warn('Clipboard API 失败:', err);
+            }
+        }
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            textarea.setSelectionRange(0, text.length);
+            const success = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return success;
+        } catch (err) {
+            console.error('execCommand 失败:', err);
+            return false;
+        }
+    }
+
+    const copied = await copyText();
+    if (copied) {
+        const originalText = btn.textContent;
+        btn.textContent = '复制成功';
+        setTimeout(() => { btn.textContent = originalText; }, 2000);
+        if (typeof showToast === 'function') showToast('复制成功');
+        else alert('复制成功');
+    } else {
+        if (typeof showToast === 'function') showToast('复制失败');
+        else alert('复制失败');
+    }
+});
+        initChoiceGroups();
+    })();
+</script>
+</body>
+</html>

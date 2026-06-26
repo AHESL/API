@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <!-- 修复：禁用移动端缩放 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>音频可视化</title>
+    <style>
+        /* === 严格按照你的字体声明 === */
+        @font-face {
+            font-family: 'MR-ZT';
+            src: url('../zw.ttf') format('truetype');
+            font-display: swap;
+            unicode-range: U+4E00-9FFF;
+        }
+        @font-face {
+            font-family: 'EnglishFont';
+            src: url('../yw.ttf') format('truetype');
+            font-display: swap;
+            unicode-range: U+0020-007F, U+FF00-FFEF;
+        }
+
+        :root {
+            --bg-deep: #0a0a14;
+            --card-bg: rgba(18, 18, 36, 0.75);
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0c0;
+            --accent-1: #c4a0ff;
+            --accent-2: #7eb8ff;
+            --accent-3: #ffb8a0;
+            --gold: #e0c080;
+            --gold-bright: #f5d890;
+            --glow-purple: rgba(160, 120, 255, 0.5);
+            --glow-blue: rgba(100, 160, 255, 0.4);
+            --glow-gold: rgba(224, 192, 128, 0.55);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(180, 160, 220, 0.35);
+            --font-sans: 'MR-ZT', 'EnglishFont', 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+            --font-mono: 'MR-ZT', 'EnglishFont', monospace;
+        }
+
+        /* ---------- 全局重置（强制所有标签使用你定义的字体系列） ---------- */
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: var(--font-sans); /* 关键！全局固定 */
+        }
+        
+        body { 
+            background: #0b0b1a; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            overflow: hidden; 
+            -webkit-touch-callout: none; /* 全局禁用长按菜单 */
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* 额外给画布加上一层防护 */
+        canvas {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+   
+        /* ---------- 主容器 ---------- */
+        .container { position: relative; width: 92vw; max-width: 1200px; height: 70vh; max-height: 600px; background: radial-gradient(ellipse at center, #12122a 0%, #08081a 100%); border-radius: 32px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.04); padding: 30px 20px 20px 20px; display: flex; flex-direction: column; border: 1px solid rgba(255, 255, 255, 0.04); }
+
+        /* ---------- 顶部信息 ---------- */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 0 8px 16px 8px; flex-shrink: 0; }
+        .header h1 { font-size: 18px; font-weight: 500; color: rgba(255, 255, 255, 0.5); letter-spacing: 2px; text-transform: uppercase; background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .status { font-size: 13px; color: rgba(255, 255, 255, 0.3); display: flex; align-items: center; gap: 8px; }
+        .status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff4444; transition: background 0.3s ease; box-shadow: 0 0 8px rgba(255, 68, 68, 0.3); }
+        .status .dot.active { background: #44ff88; box-shadow: 0 0 12px rgba(68, 255, 136, 0.6); animation: pulse-dot 1.2s ease-in-out infinite; }
+        @keyframes pulse-dot { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.6; } }
+
+        /* ---------- Canvas 区域 ---------- */
+        .canvas-wrapper { flex: 1; position: relative; border-radius: 16px; overflow: hidden; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.03); }
+        #visualizer { width: 100%; height: 100%; display: block; background: transparent; }
+
+        /* ---------- 底部控制 ---------- */
+        .controls { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 18px; flex-shrink: 0; gap: 16px; }
+        .btn { -webkit-tap-highlight-color: transparent; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.10); color: rgba(255, 255, 255, 0.7); padding: 10px 32px; border-radius: 40px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.25s ease; letter-spacing: 0.5px; backdrop-filter: blur(4px); outline: none; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.2); color: #fff; transform: scale(1.02); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4); }
+        .btn:active { transform: scale(0.96); }
+        .btn.primary { background: linear-gradient(135deg, #3CA6F1, #1A7DB5); border-color: transparent; color: #fff; box-shadow: 0 4px 20px rgba(60, 166, 241, 0.3); }
+        .btn.primary:hover { box-shadow: 0 8px 40px rgba(60, 166, 241, 0.5); transform: scale(1.03); background: linear-gradient(135deg, #4AB4FF, #238FCC); }
+        .btn.primary:active { transform: scale(0.95); }
+
+        /* --- 蓝色音量条 --- */
+        .volume-indicator { display: flex; align-items: center; gap: 12px; color: rgba(255, 255, 255, 0.25); font-size: 13px; }
+        .volume-bar { width: 80px; height: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden; }
+        .volume-bar .fill { height: 100%; width: 0%; border-radius: 4px; background: linear-gradient(90deg, #3CA6F1, #1A7DB5); transition: width 0.08s linear; }
+
+        /* ---------- 响应式 ---------- */
+        @media (max-width: 700px) { .container { width: 96vw; height: 55vh; padding: 16px 12px 12px 12px; border-radius: 20px; } .header h1 { font-size: 14px; } .btn { padding: 8px 20px; font-size: 13px; } .volume-bar { width: 50px; } .volume-indicator { font-size: 11px; } }
+        @media (max-width: 450px) { .container { height: 50vh; padding: 12px 8px 8px 8px; border-radius: 16px; } .header h1 { font-size: 12px; } .btn { padding: 6px 14px; font-size: 12px; } .volume-bar { width: 36px; } .status { font-size: 11px; } }
+
+        /* ---------- 加载提示 ---------- */
+        .loading-tip { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; color: rgba(255, 255, 255, 0.15); font-size: 15px; letter-spacing: 1px; pointer-events: none; transition: opacity 0.6s ease; gap: 12px; }
+        .loading-tip .big-icon { font-size: 42px; opacity: 0.5; }
+        .loading-tip.hidden { opacity: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 顶部 -->
+        <div class="header">
+            <h1>✦ 棱镜频谱</h1>
+            <div class="status">
+                <span class="dot" id="statusDot"></span>
+                <span id="statusText">未授权</span>
+            </div>
+        </div>
+
+        <!-- Canvas -->
+        <div class="canvas-wrapper">
+            <canvas id="visualizer"></canvas>
+            <div class="loading-tip" id="loadingTip">
+                <span class="big-icon">🎧</span>
+                <span>点击下方按钮 · 授予权限</span>
+            </div>
+        </div>
+
+        <!-- 底部 (音量在中间，按钮在下方) -->
+        <div class="controls">
+            <div class="volume-indicator">
+                <span>音量</span>
+                <div class="volume-bar">
+                    <div class="fill" id="volumeFill"></div>
+                </div>
+            </div>
+            <button class="btn primary" id="startBtn">
+                <span id="btnLabel">给予权限</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // 修复：强制屏蔽长按菜单 (右键/系统上下文菜单)
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            // 阻止鼠标/触控板选择文本
+            document.addEventListener('selectstart', function(e) {
+                e.preventDefault();
+                return false;
+            });
+
+            // ---------- DOM 引用 ----------
+            const canvas = document.getElementById('visualizer');
+            const ctx = canvas.getContext('2d');
+            const startBtn = document.getElementById('startBtn');
+            const btnLabel = document.getElementById('btnLabel');
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const volumeFill = document.getElementById('volumeFill');
+            const loadingTip = document.getElementById('loadingTip');
+
+            // ---------- 尺寸管理 ----------
+            let W = 0, H = 0;
+            const DPR = window.devicePixelRatio || 1;
+
+            function resizeCanvas() {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                W = rect.width; H = rect.height;
+                canvas.width = W * DPR; canvas.height = H * DPR;
+                canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+                ctx.scale(DPR, DPR);
+            }
+            window.addEventListener('resize', resizeCanvas);
+
+            // ---------- 音频相关 ----------
+            let audioContext = null, analyser = null, dataArray = null;
+            let isRunning = false, isInitialized = false;
+            let smoothValues = new Float32Array(128);
+            let targetValues = new Float32Array(128);
+
+            // ---------- 启动音频 ----------
+            async function startAudio() {
+                if (isInitialized) {
+                    if (audioContext && audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                        isRunning = true;
+                        updateUIState(true);
+                    }
+                    return;
+                }
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+                    });
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const source = audioContext.createMediaStreamSource(stream);
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 256;
+                    analyser.smoothingTimeConstant = 0.8;
+                    source.connect(analyser);
+                    dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                    for (let i = 0; i < 128; i++) { smoothValues[i] = 0; targetValues[i] = 0; }
+
+                    isInitialized = true;
+                    isRunning = true;
+                    loadingTip.classList.add('hidden');
+                    updateUIState(true);
+                    if (audioContext.state === 'suspended') await audioContext.resume();
+
+                    if (!window._animRunning) {
+                        window._animRunning = true;
+                        animate();
+                    }
+                } catch (err) {
+                    console.error('麦克风启动失败:', err);
+                    alert('无法访问麦克风，请检查权限设置。\n' + err.message);
+                    updateUIState(false);
+                }
+            }
+
+            function stopAudio() {
+                if (audioContext && audioContext.state === 'running') audioContext.suspend();
+                isRunning = false;
+                updateUIState(false);
+            }
+
+            function toggleAudio() {
+                if (!isInitialized) { startAudio(); return; }
+                if (isRunning) stopAudio(); else startAudio();
+            }
+
+            function updateUIState(active) {
+                if (active) {
+                    statusDot.className = 'dot active';
+                    statusText.textContent = '监听中';
+                    btnLabel.textContent = '暂停';
+                } else {
+                    statusDot.className = 'dot';
+                    statusText.textContent = isInitialized ? '暂停中' : '未授权';
+                    btnLabel.textContent = isInitialized ? '继续' : '给予权限';
+                }
+            }
+
+            // ---------- 核心绘制 ----------
+            function draw() {
+                if (!W || !H) return;
+                ctx.clearRect(0, 0, W, H);
+
+                const grad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.7);
+                grad.addColorStop(0, 'rgba(60, 166, 241, 0.08)');
+                grad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, W, H);
+
+                const freqCount = analyser ? analyser.frequencyBinCount : 128;
+                if (analyser && isRunning) {
+                    analyser.getByteFrequencyData(dataArray);
+                    for (let i = 0; i < freqCount; i++) {
+                        targetValues[i] = dataArray[i] / 255;
+                    }
+                } else if (!isRunning && isInitialized) {
+                    for (let i = 0; i < freqCount; i++) targetValues[i] = 0;
+                } else {
+                    for (let i = 0; i < freqCount; i++) { targetValues[i] = 0; smoothValues[i] = 0; }
+                }
+
+                const lerpSpeed = 0.18;
+                let totalVolume = 0;
+                for (let i = 0; i < freqCount; i++) {
+                    smoothValues[i] += (targetValues[i] - smoothValues[i]) * lerpSpeed;
+                    if (isRunning && targetValues[i] > 0.02) {
+                        const jitter = (Math.random() - 0.5) * 0.03;
+                        smoothValues[i] = Math.max(0, Math.min(1, smoothValues[i] + jitter));
+                    }
+                    totalVolume += smoothValues[i];
+                }
+
+                const avgVolume = totalVolume / freqCount;
+                volumeFill.style.width = (avgVolume * 100) + '%';
+
+                const BAR_COUNT = 64;
+                const centerY = H / 2;
+                const maxHeight = centerY - 20;
+
+                const totalWidth = W * 0.92;
+                const barWidth = (totalWidth / BAR_COUNT) * 0.75;
+                const gap = (totalWidth / BAR_COUNT) * 0.25;
+                const startX = (W - totalWidth) / 2;
+
+                const halfCount = BAR_COUNT / 2;
+
+                for (let i = 0; i < BAR_COUNT; i++) {
+                    const distFromCenter = Math.abs(i - halfCount);
+                    const freqIndex = 2 + Math.floor((distFromCenter / halfCount) * (freqCount - 3));
+                    
+                    let val = smoothValues[freqIndex] || 0;
+                    const height = val * maxHeight;
+                    if (height < 0.5) continue;
+
+                    const x = startX + i * (barWidth + gap);
+                    const topY = centerY - height;
+                    const bottomY = centerY + height;
+
+                    const hueBase = 206 + (i / BAR_COUNT) * 20; 
+                    const lightOffset = (i / BAR_COUNT) * 30;
+                    const sat = 70 + 20 * val;
+                    const light = 40 + lightOffset + 40 * val;
+
+                    const mainColor = `hsl(${hueBase}, ${sat}%, ${light}%)`;
+                    const highlightColor = `hsl(${hueBase + 5}, ${sat + 10}%, ${light + 20}%)`;
+                    const shadowColor = `hsl(${hueBase}, ${sat - 10}%, ${light - 25}%)`;
+
+                    const radius = Math.min(barWidth / 2, height);
+                    ctx.beginPath();
+                    ctx.moveTo(x + radius, topY);
+                    ctx.lineTo(x + barWidth - radius, topY);
+                    ctx.quadraticCurveTo(x + barWidth, topY, x + barWidth, topY + radius);
+                    ctx.lineTo(x + barWidth, bottomY - radius);
+                    ctx.quadraticCurveTo(x + barWidth, bottomY, x + barWidth - radius, bottomY);
+                    ctx.lineTo(x + radius, bottomY);
+                    ctx.quadraticCurveTo(x, bottomY, x, bottomY - radius);
+                    ctx.lineTo(x, topY + radius);
+                    ctx.quadraticCurveTo(x, topY, x + radius, topY);
+                    ctx.closePath();
+
+                    const gradBar = ctx.createLinearGradient(x, topY, x, bottomY);
+                    gradBar.addColorStop(0, highlightColor);
+                    gradBar.addColorStop(0.5, mainColor);
+                    gradBar.addColorStop(1, shadowColor);
+                    ctx.fillStyle = gradBar;
+                    ctx.fill();
+
+                    if (val > 0.05) {
+                        ctx.shadowColor = `hsla(${hueBase}, 90%, 70%, ${val * 0.3})`;
+                        ctx.shadowBlur = 12;
+                        ctx.fillStyle = `hsla(${hueBase}, 100%, 80%, ${val * 0.05})`;
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                    }
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(startX, centerY);
+                ctx.lineTo(startX + totalWidth, centerY);
+                ctx.strokeStyle = 'rgba(60, 166, 241, 0.06)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                if (isRunning) {
+                    for (let i = 0; i < BAR_COUNT; i += 4) {
+                        const distFromCenter = Math.abs(i - BAR_COUNT/2);
+                        const freqIndex = 2 + Math.floor((distFromCenter / (BAR_COUNT/2)) * (freqCount - 3));
+                        const val = smoothValues[freqIndex];
+                        if (val > 0.15) {
+                            const x = startX + i * (barWidth + gap) + barWidth / 2;
+                            const height = val * maxHeight;
+                            for (let side of [-1, 1]) {
+                                const y = centerY + side * height;
+                                const size = 1 + val * 2;
+                                ctx.beginPath();
+                                ctx.arc(x, y, size, 0, Math.PI * 2);
+                                ctx.fillStyle = `hsla(0, 0%, 100%, ${val * 0.1})`;
+                                ctx.fill();
+                            }
+                        }
+                    }
+                }
+            }
+
+            function animate() {
+                draw();
+                requestAnimationFrame(animate);
+            }
+
+            function init() {
+                resizeCanvas();
+                draw();
+                startBtn.addEventListener('click', toggleAudio);
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                    if (e.code === 'Space') { e.preventDefault(); toggleAudio(); }
+                });
+                window.addEventListener('resize', resizeCanvas);
+                if (!window._animRunning) {
+                    window._animRunning = true;
+                    animate();
+                }
+                updateUIState(false);
+            }
+
+            if (document.readyState === 'complete') init();
+            else window.addEventListener('load', init);
+        })();
+    </script>
+</body>
+</html>
