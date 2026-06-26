@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>解锁</title>
+    <!-- 引入MD5用于哈希比对 -->
+    <script src="md5.js"></script>
+    <!-- 新增script放存储代码 -->
+    <script>
+localStorage.setItem('pwd_hash','3936bf1ebe56cf7faacede21fbe3e230')
+localStorage.setItem('pass_len','6')
+    </script>
+    <style>
+        @font-face {
+          font-family: FontCN;
+          src: url("../../zw.ttf");
+          font-display: swap;
+        }
+        @font-face {
+          font-family: FontEN;
+          src: url("../../yw.ttf");
+          font-display: swap;
+        }
+        /* 全局统一：中文用中文字体，英文数字用英文字体 */
+        * {
+          font-family: FontEN,FontCN,-apple-system,sans-serif;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 默认深色主题变量（原有样式不变） */
+        :root {
+            --bg-gradient-start: #1a2a3a;
+            --bg-gradient-end: #0a0f1a;
+            --card-bg: rgba(30, 32, 44, 0.6);
+            --card-border: rgba(255, 255, 255, 0.2);
+            --dot-bg: rgba(255, 255, 255, 0.35);
+            --dot-filled: #ffffff;
+            --dot-glow: rgba(255, 255, 255, 0.7);
+            --hint-color: rgba(255, 255, 255, 0.7);
+            --error-color: #ff8a7a;
+            --success-color: #8effc0;
+            --key-bg: rgba(255, 255, 255, 0.12);
+            --key-border: rgba(255, 255, 255, 0.2);
+            --key-shadow: 0 8px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            --key-func-bg: rgba(100, 110, 130, 0.5);
+            --ripple-gradient: radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 80%);
+            --footer-color: rgba(255, 255, 255, 0.35);
+        }
+
+        /* 浅色主题变量（新增，完全重写所需变量） */
+        [data-theme="light"] {
+            --bg-gradient-start: #e0e5ec;
+            --bg-gradient-end: #cbd5e1;
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --card-border: rgba(0, 0, 0, 0.1);
+            --dot-bg: rgba(0, 0, 0, 0.2);
+            --dot-filled: #1e293b;
+            --dot-glow: rgba(0, 0, 0, 0.3);
+            --hint-color: #1e293b;
+            --error-color: #dc2626;
+            --success-color: #10b981;
+            --key-bg: rgba(255, 255, 255, 0.5);
+            --key-border: rgba(0, 0, 0, 0.1);
+            --key-shadow: 0 8px 12px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            --key-func-bg: rgba(200, 210, 220, 0.8);
+            --ripple-gradient: radial-gradient(circle, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0) 80%);
+            --footer-color: #475569;
+        }
+
+        body {
+            background: radial-gradient(circle at 30% 10%, var(--bg-gradient-start), var(--bg-gradient-end));
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+            padding: 20px;
+            transition: background 0.3s;
+        }
+
+        .unlock-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(28px);
+            border-radius: 68px;
+            padding: 40px 28px 48px;
+            width: 100%;
+            max-width: 380px;
+            border: 1px solid var(--card-border);
+        }
+
+        .dots-container {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin: 20px 0 16px;
+        }
+        .dot {
+            width: 22px;
+            height: 22px;
+            background: var(--dot-bg);
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 2px rgba(0,0,0,0.1);
+        }
+        .dot.filled {
+            background: var(--dot-filled);
+            box-shadow: 0 0 12px var(--dot-glow), 0 2px 4px rgba(0,0,0,0.1);
+            transform: scale(1.02);
+        }
+
+        .hint {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            color: var(--hint-color);
+            margin-bottom: 28px;
+            transition: color 0.2s;
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .key {
+            aspect-ratio: 1 / 1;
+            background: var(--key-bg);
+            backdrop-filter: blur(8px);
+            border-radius: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 34px;
+            font-weight: 500;
+            color: var(--hint-color);
+            cursor: pointer;
+            border: 0.5px solid var(--key-border);
+            box-shadow: var(--key-shadow);
+            /* 修改1：按键回弹缓动放慢，替换缓动函数，回弹更平缓 */
+            transition: transform 0.38s cubic-bezier(0.2, 0.2, 0.2, 1), background 0.1s;
+            position: relative;
+            overflow: hidden;
+            will-change: transform;
+            touch-action: manipulation;
+        }
+
+        .key:active {
+            transform: scale(0.92);
+            transition: transform 0.38s cubic-bezier(0.2, 0.2, 0.2, 1);
+        }
+
+        .key .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--ripple-gradient);
+            transform: scale(0);
+            opacity: 1;
+            pointer-events: none;
+            animation: rippleAnim 0.5s ease-out forwards;
+        }
+
+        @keyframes rippleAnim {
+            0% { transform: scale(0); opacity: 0.8; }
+            100% { transform: scale(5); opacity: 0; }
+        }
+
+        .key-func {
+            background: var(--key-func-bg);
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .delete-icon {
+            font-size: 28px;
+            font-weight: 400;
+            line-height: 1;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: var(--footer-color);
+            margin-top: 12px;
+        }
+
+        /* 成功绿光脉冲 */
+        @keyframes successPulse {
+            0% { box-shadow: 0 0 0 0 rgba(90, 230, 160, 0.6); }
+            70% { box-shadow: 0 0 0 12px rgba(90, 230, 160, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(90, 230, 160, 0); }
+        }
+        .success-glow {
+            animation: successPulse 0.6s ease-out;
+        }
+        /* 新增：错误红光脉冲光晕 */
+        @keyframes errorPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 110, 110, 0.6); }
+            70% { box-shadow: 0 0 0 12px rgba(255, 110, 110, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 110, 110, 0); }
+        }
+        .error-glow {
+            animation: errorPulse 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+<div class="unlock-card" id="unlockCard">
+    <div class="dots-container" id="dotsContainer"></div>
+    <div class="hint" id="hintText">输入密码</div>
+    <div class="keypad" id="keypad"></div>
+    <div class="footer"> </div>
+</div>
+
+<script>
+    // ========== 读取配置 ==========
+    // 1. 密码位数 (4 或 6)
+    const passLen = (() => {
+        const stored = localStorage.getItem('pass_len');
+        if (stored === '6') return 6;
+        return 4;   // 默认 4 位
+    })();
+
+    // 读取本地存储的密码哈希
+    const saveHash = localStorage.getItem("pwd_hash");
+    // 无自定义哈希时，默认密码全0
+    const defaultPwd = '0'.repeat(passLen);
+
+    // 2. 主题 (light / dark)，默认深色
+    const theme = (() => {
+        const t = localStorage.getItem('theme');
+        if (t === 'light') return 'light';
+        return 'dark';
+    })();
+    // 应用到 html 根元素
+    document.documentElement.setAttribute('data-theme', theme);
+
+    // ========== DOM 元素 ==========
+    const dotsContainer = document.getElementById('dotsContainer');
+    const hintText = document.getElementById('hintText');
+    const keypadDiv = document.getElementById('keypad');
+    const card = document.getElementById('unlockCard');
+
+    let currentPassword = '';
+    let errorTimeout = null;
+    let successTimeout = null;
+
+    // 动态生成圆点（数量 = passLen）
+    function createDots() {
+        dotsContainer.innerHTML = '';
+        for (let i = 0; i < passLen; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            dotsContainer.appendChild(dot);
+        }
+    }
+
+    function updateDots() {
+        const dots = document.querySelectorAll('.dot');
+        const len = currentPassword.length;
+        dots.forEach((dot, idx) => {
+            if (idx < len) dot.classList.add('filled');
+            else dot.classList.remove('filled');
+        });
+    }
+
+    function addRipple(e, element) {
+        const rect = element.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple';
+        ripple.style.width = ripple.style.height = `${size}px`;
+        ripple.style.left = `${x - size/2}px`;
+        ripple.style.top = `${y - size/2}px`;
+        element.appendChild(ripple);
+        ripple.addEventListener('animationend', () => ripple.remove());
+    }
+
+    // 错误提示，添加红色光晕
+    function showError() {
+        if (errorTimeout) clearTimeout(errorTimeout);
+        hintText.textContent = '密码错误';
+        hintText.style.color = 'var(--error-color)';
+        card.classList.add('error-glow');
+        errorTimeout = setTimeout(() => {
+            hintText.textContent = '输入密码';
+            hintText.style.color = 'var(--hint-color)';
+            card.classList.remove('error-glow');
+            // 错误延时清空输入
+            currentPassword = '';
+            updateDots();
+            errorTimeout = null;
+        }, 1200);
+    }
+
+    function verifyAndRedirect() {
+        // 核心修改：哈希对比
+        let inputHash = md5(currentPassword);
+        let targetHash = saveHash ? saveHash : md5(defaultPwd);
+
+        if (inputHash === targetHash) {
+            hintText.textContent = '解锁成功';
+            hintText.style.color = 'var(--success-color)';
+            card.classList.add('success-glow');
+            if (successTimeout) clearTimeout(successTimeout);
+            successTimeout = setTimeout(() => {
+                // 跳转目标网址（可自行修改）
+                window.location.href = 'https://baidu.cn';
+            }, 220);
+        } else {
+            showError();
+        }
+    }
+
+    function onKeyPress(value) {
+        if (successTimeout) return;
+        if (value === 'DEL') {
+            if (currentPassword.length > 0) {
+                currentPassword = currentPassword.slice(0, -1);
+                updateDots();
+            }
+            return;
+        }
+        if (value === 'CLEAR') {
+            currentPassword = '';
+            updateDots();
+            return;
+        }
+        if (/^\d$/.test(value)) {
+            // 没输满就正常追加，**一定点亮圆点**，输满再校验
+            if (currentPassword.length < passLen) {
+                currentPassword += value;
+                updateDots();
+                // 刚好填满所有位数 → 执行校验
+                if (currentPassword.length === passLen) {
+                    verifyAndRedirect();
+                }
+            }
+            // 已满位再次点击数字：直接忽略
+        }
+    }
+
+    function buildKeypad() {
+        const layout = [
+            '1', '2', '3',
+            '4', '5', '6',
+            '7', '8', '9',
+            'CLEAR', '0', 'DEL'
+        ];
+        keypadDiv.innerHTML = '';
+        layout.forEach(key => {
+            const btn = document.createElement('div');
+            btn.className = 'key';
+            if (key === 'CLEAR' || key === 'DEL') {
+                btn.classList.add('key-func');
+            }
+            if (key === 'CLEAR') {
+                btn.textContent = '清除';
+            } else if (key === 'DEL') {
+                btn.innerHTML = '<span class="delete-icon">⌫</span>';
+            } else {
+                btn.textContent = key;
+            }
+
+            const handler = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addRipple(e, btn);
+                onKeyPress(key);
+            };
+            btn.addEventListener('pointerdown', handler);
+            keypadDiv.appendChild(btn);
+        });
+    }
+
+    // 键盘支持（电脑）
+    function initKeyboardSupport() {
+        window.addEventListener('keydown', (e) => {
+            const key = e.key;
+            if (/^[0-9]$/.test(key)) {
+                e.preventDefault();
+                onKeyPress(key);
+            } else if (key === 'Backspace') {
+                e.preventDefault();
+                onKeyPress('DEL');
+            } else if (key === 'Delete') {
+                e.preventDefault();
+                onKeyPress('CLEAR');
+            } else if (key === 'Enter') {
+                e.preventDefault();
+                // 回车仅在输满密码时校验
+                if (currentPassword.length === passLen) {
+                    verifyAndRedirect();
+                }
+            }
+        });
+    }
+
+    function init() {
+        createDots();
+        buildKeypad();
+        updateDots();
+        initKeyboardSupport();
+        hintText.textContent = `输入密码`;
+    }
+
+    init();
+</script>
+</body>
+</html>
