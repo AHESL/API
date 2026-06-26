@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>二维码转码</title>
+    <style>
+    /* === 字体声明 === */
+    @font-face {
+      font-family: 'MR-ZT';
+      src: url('../zw.ttf') format('truetype');
+      font-display: swap;
+      unicode-range: U+4E00-9FFF;
+    }
+    @font-face {
+      font-family: 'EnglishFont';
+      src: url('../yw.ttf') format('truetype');
+      font-display: swap;
+      unicode-range: U+0020-007F, U+FF00-FFEF;
+    }
+
+        :root {
+            --bg-deep: #0a0a14;
+            --card-bg: rgba(18, 18, 36, 0.75);
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0c0;
+            --accent-1: #c4a0ff;
+            --accent-2: #7eb8ff;
+            --accent-3: #ffb8a0;
+            --gold: #e0c080;
+            --gold-bright: #f5d890;
+            --glow-purple: rgba(160, 120, 255, 0.5);
+            --glow-blue: rgba(100, 160, 255, 0.4);
+            --glow-gold: rgba(224, 192, 128, 0.55);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(180, 160, 220, 0.35);
+            --font-sans: 'MR-ZT', 'EnglishFont', 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+            --font-mono: 'MR-ZT', 'EnglishFont', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg-deep);
+            font-family: var(--font-sans);
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            cursor: default;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(80px);
+            opacity: 0.35;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+        }
+        .bg-orb--purple {
+            width: 420px;
+            height: 420px;
+            background: radial-gradient(circle, rgba(140, 100, 240, 0.55) 0%, transparent 70%);
+            top: -15%;
+            left: -10%;
+            animation-name: orbFloat1;
+            animation-duration: 18s;
+        }
+        .bg-orb--blue {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, rgba(60, 140, 240, 0.45) 0%, transparent 70%);
+            bottom: -18%;
+            right: -8%;
+            animation-name: orbFloat2;
+            animation-duration: 22s;
+        }
+        .bg-orb--gold {
+            width: 280px;
+            height: 280px;
+            background: radial-gradient(circle, rgba(210, 170, 100, 0.35) 0%, transparent 70%);
+            top: 50%;
+            left: 55%;
+            animation-name: orbFloat3;
+            animation-duration: 20s;
+            animation-delay: -7s;
+        }
+        .bg-orb--small {
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(180, 140, 220, 0.3) 0%, transparent 70%);
+            top: 30%;
+            left: 65%;
+            animation-name: orbFloat4;
+            animation-duration: 15s;
+            animation-delay: -3s;
+        }
+
+        @keyframes orbFloat1 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            25% {
+                transform: translate(80px, 50px) scale(1.15);
+            }
+            50% {
+                transform: translate(30px, -30px) scale(0.9);
+            }
+            75% {
+                transform: translate(-40px, 60px) scale(1.08);
+            }
+        }
+        @keyframes orbFloat2 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            33% {
+                transform: translate(-60px, -40px) scale(1.12);
+            }
+            66% {
+                transform: translate(40px, 30px) scale(0.88);
+            }
+        }
+        @keyframes orbFloat3 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            30% {
+                transform: translate(-50px, 40px) scale(1.1);
+            }
+            60% {
+                transform: translate(20px, -50px) scale(0.92);
+            }
+            90% {
+                transform: translate(40px, 20px) scale(1.05);
+            }
+        }
+        @keyframes orbFloat4 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(-30px, -25px) scale(1.2);
+            }
+        }
+
+        .main-card {
+            position: relative;
+            z-index: 10;
+            width: 480px;
+            max-width: 94vw;
+            background: var(--card-bg);
+            backdrop-filter: blur(28px) saturate(140%);
+            -webkit-backdrop-filter: blur(28px) saturate(140%);
+            border-radius: 28px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 4px 40px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                0 20px 60px rgba(100, 80, 180, 0.12);
+            padding: 40px 36px 36px;
+            transition: box-shadow 0.8s ease, border-color 0.8s ease;
+        }
+        .main-card.qr-visible {
+            border-color: var(--border-glow);
+            box-shadow: 0 4px 40px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                0 20px 70px rgba(160, 120, 220, 0.18), 0 0 0 1px rgba(200, 170, 240, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 28px;
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        .card-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 32px;
+            height: 2px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3));
+            opacity: 0.7;
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s;
+        }
+        .main-card.qr-visible .card-title::after {
+            width: 50px;
+            opacity: 1;
+            background: linear-gradient(90deg, var(--accent-1), var(--gold-bright), var(--accent-3));
+        }
+        .title-icon {
+            display: inline-block;
+            margin-right: 6px;
+            animation: titleIconPulse 2.5s ease-in-out infinite;
+        }
+        @keyframes titleIconPulse {
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            50% {
+                transform: scale(1.15);
+                opacity: 1;
+            }
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        .input-field {
+            width: 100%;
+            padding: 14px 48px 14px 18px;
+            font-size: 1rem;
+            font-family: var(--font-sans);
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.03);
+            border: none;
+            border-radius: 14px;
+            outline: none;
+            caret-color: var(--accent-2);
+            letter-spacing: 0.02em;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 0 0px transparent, 0 2px 8px rgba(0, 0, 0, 0.2) inset;
+            position: relative;
+            z-index: 2;
+        }
+        .input-field::placeholder {
+            color: rgba(180, 180, 210, 0.45);
+            letter-spacing: 0.03em;
+            transition: color 0.4s, letter-spacing 0.4s;
+        }
+        .input-field:focus::placeholder {
+            color: rgba(180, 180, 210, 0.25);
+            letter-spacing: 0.06em;
+        }
+        .input-field:focus {
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 0 0 3px rgba(140, 120, 220, 0.18), 0 2px 8px rgba(0, 0, 0, 0.15) inset;
+        }
+
+        .input-glow-bar {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0%;
+            height: 2.5px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-1));
+            z-index: 3;
+            pointer-events: none;
+            opacity: 0;
+            filter: blur(0.5px);
+            transition: width 0.65s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.45s ease;
+        }
+        .input-field:focus~.input-glow-bar {
+            width: 85%;
+            opacity: 1;
+            filter: blur(0px);
+            box-shadow: 0 0 14px 3px var(--glow-purple);
+        }
+        .main-card.qr-visible .input-glow-bar {
+            background: linear-gradient(90deg, var(--accent-1), var(--gold-bright), var(--accent-2));
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%) scale(0);
+            z-index: 5;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.04);
+            color: rgba(200, 200, 220, 0.7);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            pointer-events: none;
+            opacity: 0;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .clear-btn.visible {
+            transform: translateY(-50%) scale(1);
+            pointer-events: auto;
+            opacity: 1;
+        }
+        .clear-btn:hover {
+            background: rgba(255, 100, 100, 0.2);
+            border-color: rgba(255, 150, 150, 0.5);
+            color: #ffaaaa;
+            box-shadow: 0 0 16px rgba(255, 100, 100, 0.35);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .clear-btn:active {
+            transform: translateY(-50%) scale(0.9);
+            transition: transform 0.15s ease;
+        }
+        .clear-btn svg {
+            width: 14px;
+            height: 14px;
+            pointer-events: none;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .clear-btn:hover svg {
+            transform: rotate(90deg);
+        }
+
+        .connector-line {
+            width: 2px;
+            height: 0;
+            margin: 0 auto;
+            background: linear-gradient(to bottom,
+                    rgba(160, 140, 220, 0),
+                    rgba(180, 160, 230, 0.7) 40%,
+                    rgba(200, 180, 240, 0.8) 60%,
+                    rgba(180, 160, 230, 0.7) 80%,
+                    rgba(160, 140, 220, 0));
+            border-radius: 1px;
+            transition: height 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            z-index: 1;
+        }
+        .connector-line.active {
+            height: 28px;
+            animation: connectorGlow 2s ease-in-out infinite;
+        }
+        @keyframes connectorGlow {
+            0%,
+            100% {
+                box-shadow: 0 0 6px 1px rgba(170, 150, 220, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 16px 4px rgba(200, 170, 240, 0.6);
+            }
+        }
+
+        .qr-outer-wrapper {
+            position: relative;
+            margin: 0 auto;
+            width: 260px;
+            height: 0;
+            overflow: visible;
+            transition: height 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-outer-wrapper.expanded {
+            height: auto;
+        }
+
+        .qr-halo {
+            position: absolute;
+            inset: 6px;
+            border-radius: 22px;
+            padding: 5px;
+            background: conic-gradient(from 0deg,
+                    transparent 0deg,
+                    rgba(200, 160, 240, 0.6) 45deg,
+                    rgba(160, 200, 255, 0.5) 90deg,
+                    rgba(240, 200, 140, 0.55) 135deg,
+                    transparent 180deg,
+                    rgba(200, 160, 240, 0.6) 225deg,
+                    rgba(160, 200, 255, 0.5) 270deg,
+                    rgba(240, 200, 140, 0.55) 315deg,
+                    transparent 360deg);
+            opacity: 0;
+            transform: scale(0.5);
+            animation: none;
+            pointer-events: none;
+            transition: opacity 0.5s ease, transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+        }
+        .qr-halo.spinning {
+            opacity: 1;
+            transform: scale(1);
+            animation: haloSpin 10s linear infinite;
+        }
+        @keyframes haloSpin {
+            from {
+                transform: scale(1) rotate(0deg);
+            }
+            to {
+                transform: scale(1) rotate(360deg);
+            }
+        }
+
+        .qr-inner {
+            position: relative;
+            width: calc(100% - 28px);
+            aspect-ratio: 1 / 1;
+            margin: 14px auto;
+            border-radius: 16px;
+            background: rgba(22, 22, 40, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+            overflow: hidden;
+            transform: scale(0);
+            opacity: 0;
+            transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
+            z-index: 2;
+        }
+        .qr-inner.visible {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .qr-inner canvas,
+        .qr-inner img {
+            border-radius: 6px;
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .qr-glow-pulse {
+            position: absolute;
+            inset: 8px;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0;
+            box-shadow: 0 0 30px 8px var(--glow-gold), 0 0 60px 20px rgba(180, 140, 200, 0.3);
+            transition: opacity 0.5s ease;
+            animation: none;
+        }
+        .qr-glow-pulse.active {
+            opacity: 1;
+            animation: glowBreathe 3s ease-in-out infinite;
+        }
+        @keyframes glowBreathe {
+            0%,
+            100% {
+                box-shadow: 0 0 25px 6px var(--glow-gold), 0 0 50px 16px rgba(180, 140, 200, 0.25);
+            }
+            50% {
+                box-shadow: 0 0 40px 14px rgba(240, 200, 140, 0.65), 0 0 75px 28px rgba(180, 140, 200, 0.4);
+            }
+        }
+
+        .corner-mark {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .corner-mark.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .corner-mark::before,
+        .corner-mark::after {
+            content: '';
+            position: absolute;
+            background: var(--gold);
+            border-radius: 1px;
+            box-shadow: 0 0 6px 1px var(--glow-gold);
+        }
+        .corner-mark::before {
+            width: 100%;
+            height: 1.5px;
+        }
+        .corner-mark::after {
+            width: 1.5px;
+            height: 100%;
+        }
+        .corner-mark--tl {
+            top: -8px;
+            left: -8px;
+        }
+        .corner-mark--tl::before {
+            top: 0;
+            left: 0;
+        }
+        .corner-mark--tl::after {
+            top: 0;
+            left: 0;
+        }
+        .corner-mark--tr {
+            top: -8px;
+            right: -8px;
+        }
+        .corner-mark--tr::before {
+            top: 0;
+            right: 0;
+        }
+        .corner-mark--tr::after {
+            top: 0;
+            right: 0;
+        }
+        .corner-mark--bl {
+            bottom: -8px;
+            left: -8px;
+        }
+        .corner-mark--bl::before {
+            bottom: 0;
+            left: 0;
+        }
+        .corner-mark--bl::after {
+            bottom: 0;
+            left: 0;
+        }
+        .corner-mark--br {
+            bottom: -8px;
+            right: -8px;
+        }
+        .corner-mark--br::before {
+            bottom: 0;
+            right: 0;
+        }
+        .corner-mark--br::after {
+            bottom: 0;
+            right: 0;
+        }
+
+        .particle-burst-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .burst-particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 1.5px;
+            pointer-events: none;
+            animation: particleBurst 0.7s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+        @keyframes particleBurst {
+            0% {
+                transform: translate(0, 0) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--dx), var(--dy)) scale(0) rotate(var(--rot));
+                opacity: 0;
+            }
+        }
+
+        .ripple-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid rgba(220, 190, 130, 0.7);
+            pointer-events: none;
+            z-index: 15;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 0;
+            animation: none;
+        }
+        .ripple-ring.animate {
+            animation: rippleOut 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+        @keyframes rippleOut {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.9;
+                border-width: 3px;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(28);
+                opacity: 0;
+                border-width: 0.5px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .main-card {
+                padding: 28px 20px 24px;
+                border-radius: 22px;
+            }
+            .card-title {
+                font-size: 1.1rem;
+                margin-bottom: 22px;
+            }
+            .input-field {
+                padding: 12px 42px 12px 14px;
+                font-size: 0.9rem;
+            }
+            .qr-outer-wrapper {
+                width: 220px;
+            }
+            .qr-inner {
+                width: calc(100% - 20px);
+                margin: 10px auto;
+            }
+            .qr-halo {
+                inset: 4px;
+                padding: 4px;
+            }
+            .corner-mark {
+                width: 12px;
+                height: 12px;
+            }
+            .corner-mark--tl {
+                top: -6px;
+                left: -6px;
+            }
+            .corner-mark--tr {
+                top: -6px;
+                right: -6px;
+            }
+            .corner-mark--bl {
+                bottom: -6px;
+                left: -6px;
+            }
+            .corner-mark--br {
+                bottom: -6px;
+                right: -6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-orb bg-orb--purple"></div>
+    <div class="bg-orb bg-orb--blue"></div>
+    <div class="bg-orb bg-orb--gold"></div>
+    <div class="bg-orb bg-orb--small"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <div class="main-card" id="mainCard">
+        <div class="card-title">
+            <span class="title-icon">✨</span>文字转二维码
+        </div>
+        <div class="input-wrapper" id="inputWrapper">
+            <!-- ★ 这里加了 value="你好世界" ★ -->
+            <input type="text" class="input-field" id="inputField" value="" placeholder="输入任意内容，生成二维码..." autocomplete="off">
+            <div class="input-glow-bar"></div>
+            <button class="clear-btn" id="clearBtn" aria-label="清空内容">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="connector-line" id="connectorLine"></div>
+        <div class="qr-outer-wrapper" id="qrOuterWrapper">
+            <div class="qr-halo" id="qrHalo"></div>
+            <div class="qr-glow-pulse" id="qrGlowPulse"></div>
+            <div class="qr-inner" id="qrInner">
+                <div id="qrcode"></div>
+                <div class="corner-mark corner-mark--tl" id="cornerTL"></div>
+                <div class="corner-mark corner-mark--tr" id="cornerTR"></div>
+                <div class="corner-mark corner-mark--bl" id="cornerBL"></div>
+                <div class="corner-mark corner-mark--br" id="cornerBR"></div>
+            </div>
+            <div class="particle-burst-layer" id="particleBurstLayer"></div>
+            <div class="ripple-ring" id="rippleRing"></div>
+        </div>
+    </div>
+
+    <script src="js/qrcode.js">
+    </script>
+    <script>
+        (function() {
+            const mainCard = document.getElementById('mainCard');
+            const inputField = document.getElementById('inputField');
+            const clearBtn = document.getElementById('clearBtn');
+            const connectorLine = document.getElementById('connectorLine');
+            const qrOuterWrapper = document.getElementById('qrOuterWrapper');
+            const qrHalo = document.getElementById('qrHalo');
+            const qrGlowPulse = document.getElementById('qrGlowPulse');
+            const qrInner = document.getElementById('qrInner');
+            const qrcodeContainer = document.getElementById('qrcode');
+            const cornerTL = document.getElementById('cornerTL');
+            const cornerTR = document.getElementById('cornerTR');
+            const cornerBL = document.getElementById('cornerBL');
+            const cornerBR = document.getElementById('cornerBR');
+            const particleBurstLayer = document.getElementById('particleBurstLayer');
+            const rippleRing = document.getElementById('rippleRing');
+
+            let qrCodeInstance = null;
+            let currentQRContent = '';
+            let isQRVisible = false;
+            let isAnimating = false;
+
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            const PARTICLE_COUNT = 70;
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resizeCanvas();
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                initParticles();
+            });
+
+            function createParticle() {
+                return {
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2.2 + 0.6,
+                    speedX: (Math.random() - 0.5) * 0.35,
+                    speedY: (Math.random() - 0.5) * 0.35,
+                    opacity: Math.random() * 0.5 + 0.2,
+                    pulseSpeed: Math.random() * 0.015 + 0.005,
+                    pulseOffset: Math.random() * Math.PI * 2,
+                    hue: Math.random() < 0.5 ? 240 + Math.random() * 40 : 35 + Math.random() * 25,
+                };
+            }
+
+            function initParticles() {
+                particles = [];
+                for (let i = 0; i < PARTICLE_COUNT; i++) {
+                    particles.push(createParticle());
+                }
+            }
+            initParticles();
+
+            function animateParticles(timestamp) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.x += p.speedX;
+                    p.y += p.speedY;
+                    if (p.x < -20) p.x = canvas.width + 20;
+                    if (p.x > canvas.width + 20) p.x = -20;
+                    if (p.y < -20) p.y = canvas.height + 20;
+                    if (p.y > canvas.height + 20) p.y = -20;
+                    const pulse = Math.sin(timestamp * p.pulseSpeed + p.pulseOffset) * 0.3 + 0.7;
+                    const alpha = p.opacity * pulse;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(${p.hue}, 50%, 75%, ${alpha})`;
+                    ctx.fill();
+                    if (p.size > 1.5 && alpha > 0.3) {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
+                        ctx.fillStyle = `hsla(${p.hue}, 50%, 75%, ${alpha * 0.15})`;
+                        ctx.fill();
+                    }
+                });
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 100) {
+                            const lineAlpha = (1 - dist / 100) * 0.12;
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = `rgba(170,160,210,${lineAlpha})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(animateParticles);
+            }
+            requestAnimationFrame(animateParticles);
+
+            function getQRContent() {
+                return inputField.value.trim();
+            }
+
+            function generateQRCode(content) {
+                if (qrCodeInstance) {
+                    qrCodeInstance.clear();
+                    qrCodeInstance = null;
+                }
+                qrcodeContainer.innerHTML = '';
+                if (!content) return;
+                qrCodeInstance = new QRCode(qrcodeContainer, {
+                    text: content,
+                    width: 260,
+                    height: 260,
+                    colorDark: '#1a1a30',
+                    colorLight: '#fafaf6',
+                    correctLevel: QRCode.CorrectLevel.M,
+                });
+                currentQRContent = content;
+            }
+
+            function clearQRCode() {
+                if (qrCodeInstance) {
+                    qrCodeInstance.clear();
+                    qrCodeInstance = null;
+                }
+                qrcodeContainer.innerHTML = '';
+                currentQRContent = '';
+            }
+
+            function showQRCode(content) {
+                if (isAnimating) return;
+                if (isQRVisible && currentQRContent === content) return;
+                if (isQRVisible && currentQRContent !== content) {
+                    hideQRCodeQuick(() => {
+                        generateQRCode(content);
+                        performShowAnimation();
+                    });
+                    return;
+                }
+                generateQRCode(content);
+                performShowAnimation();
+            }
+
+            function performShowAnimation() {
+                isAnimating = true;
+                isQRVisible = true;
+                qrOuterWrapper.classList.add('expanded');
+                connectorLine.classList.add('active');
+                mainCard.classList.add('qr-visible');
+                setTimeout(() => {
+                    qrInner.classList.add('visible');
+                    qrHalo.classList.add('spinning');
+                    qrGlowPulse.classList.add('active');
+                }, 150);
+                const corners = [cornerTL, cornerTR, cornerBL, cornerBR];
+                corners.forEach((corner, i) => {
+                    setTimeout(() => {
+                        corner.classList.add('visible');
+                    }, 280 + i * 70);
+                });
+                setTimeout(() => {
+                    rippleRing.classList.remove('animate');
+                    void rippleRing.offsetWidth;
+                    rippleRing.classList.add('animate');
+                }, 200);
+                setTimeout(() => {
+                    isAnimating = false;
+                }, 600);
+                updateClearBtn();
+            }
+
+            function hideQRCode(callback) {
+                if (isAnimating && !callback) return;
+                isAnimating = true;
+                spawnBurstParticles();
+                const corners = [cornerTL, cornerTR, cornerBL, cornerBR];
+                corners.forEach((corner, i) => {
+                    setTimeout(() => {
+                        corner.classList.remove('visible');
+                    }, i * 40);
+                });
+                setTimeout(() => {
+                    qrInner.classList.remove('visible');
+                    qrHalo.classList.remove('spinning');
+                    qrGlowPulse.classList.remove('active');
+                }, 80);
+                setTimeout(() => {
+                    qrOuterWrapper.classList.remove('expanded');
+                    connectorLine.classList.remove('active');
+                    mainCard.classList.remove('qr-visible');
+                }, 300);
+                setTimeout(() => {
+                    clearQRCode();
+                    isQRVisible = false;
+                    isAnimating = false;
+                    updateClearBtn();
+                    if (callback) callback();
+                }, 500);
+            }
+
+            function hideQRCodeQuick(callback) {
+                qrInner.classList.remove('visible');
+                qrHalo.classList.remove('spinning');
+                qrGlowPulse.classList.remove('active');
+                const corners = [cornerTL, cornerTR, cornerBL, cornerBR];
+                corners.forEach(c => c.classList.remove('visible'));
+                clearQRCode();
+                isQRVisible = false;
+                updateClearBtn();
+                setTimeout(() => {
+                    if (callback) callback();
+                }, 200);
+            }
+
+            function spawnBurstParticles() {
+                const layer = particleBurstLayer;
+                const rect = qrInner.getBoundingClientRect();
+                const layerRect = qrOuterWrapper.getBoundingClientRect();
+                const offsetX = rect.left - layerRect.left;
+                const offsetY = rect.top - layerRect.top;
+                const centerX = offsetX + rect.width / 2;
+                const centerY = offsetY + rect.height / 2;
+                const spreadRadius = Math.max(rect.width, rect.height) * 0.8;
+                const count = 28;
+                const fragment = document.createDocumentFragment();
+                for (let i = 0; i < count; i++) {
+                    const particle = document.createElement('div');
+                    particle.classList.add('burst-particle');
+                    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+                    const distance = spreadRadius * (0.4 + Math.random() * 0.8);
+                    const dx = Math.cos(angle) * distance;
+                    const dy = Math.sin(angle) * distance;
+                    const rot = (Math.random() - 0.5) * 360 * 2;
+                    const size = 3 + Math.random() * 7;
+                    const hue = Math.random() < 0.5 ? 40 : 260;
+                    particle.style.cssText = `
+                        left: ${centerX}px;
+                        top: ${centerY}px;
+                        width: ${size}px;
+                        height: ${size}px;
+                        background: hsl(${hue}, 60%, ${55 + Math.random() * 30}%);
+                        --dx: ${dx}px;
+                        --dy: ${dy}px;
+                        --rot: ${rot}deg;
+                        animation-duration: ${0.5 + Math.random() * 0.5}s;
+                        box-shadow: 0 0 ${4 + Math.random()*6}px hsl(${hue}, 70%, 60%);
+                    `;
+                    fragment.appendChild(particle);
+                }
+                layer.appendChild(fragment);
+                setTimeout(() => {
+                    layer.innerHTML = '';
+                }, 800);
+            }
+
+            function updateClearBtn() {
+                const hasContent = inputField.value.trim().length > 0;
+                if (hasContent) {
+                    clearBtn.classList.add('visible');
+                } else {
+                    clearBtn.classList.remove('visible');
+                }
+            }
+
+            clearBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                inputField.value = '';
+                updateClearBtn();
+                if (isQRVisible) {
+                    hideQRCode();
+                }
+            });
+
+            inputField.addEventListener('input', () => {
+                updateClearBtn();
+                if (isQRVisible && qrGlowPulse.classList.contains('active')) {
+                    qrGlowPulse.style.animation = 'none';
+                    void qrGlowPulse.offsetWidth;
+                    qrGlowPulse.style.animation = 'glowBreathe 3s ease-in-out infinite';
+                    qrGlowPulse.style.boxShadow =
+                        '0 0 50px 16px rgba(240,200,140,0.7), 0 0 90px 30px rgba(180,140,200,0.45)';
+                    setTimeout(() => {
+                        qrGlowPulse.style.boxShadow = '';
+                    }, 350);
+                }
+            });
+
+            inputField.addEventListener('focus', () => {
+                updateClearBtn();
+            });
+
+            inputField.addEventListener('blur', () => {
+                const content = getQRContent();
+                if (content) {
+                    showQRCode(content);
+                } else if (isQRVisible) {
+                    hideQRCode();
+                }
+                updateClearBtn();
+            });
+
+            inputField.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    inputField.blur();
+                }
+                if (e.key === 'Escape' && inputField.value.trim()) {
+                    inputField.value = '';
+                    updateClearBtn();
+                    if (isQRVisible) {
+                        hideQRCode();
+                    }
+                }
+            });
+
+            inputField.addEventListener('paste', () => {
+                setTimeout(() => {
+                    updateClearBtn();
+                }, 50);
+            });
+
+            // ★★★ 新增：页面加载时自动生成"你好世界"的二维码 ★★★
+            updateClearBtn();
+            const initContent = getQRContent();
+            if (initContent) {
+                // 直接生成，不走动画（因为页面刚加载，容器还没展开）
+                generateQRCode(initContent);
+                performShowAnimation();
+            }
+
+            console.log('%c✨ 文字转二维码已就绪 %c| %c默认显示"你好世界"的二维码',
+                'color: #f5d890; font-size: 1.1em;', '', 'color: #c4a0ff;');
+            console.log('%c💡 提示：按回车键快速生成，Escape键或叉号清空内容',
+                'color: #a0c0e0; font-size: 0.9em;');
+        })();
+    </script>
+</body>
+</html>
