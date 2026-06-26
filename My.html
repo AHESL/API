@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>我的 · API调用工具</title>
+    <link rel="stylesheet" href="css/cropper.css">
+    <link rel="stylesheet" href="css/my.css">
+</head>
+<body>
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-card">
+        <div class="modal-title" id="modalTitle">提示</div>
+        <div class="modal-message" id="modalMessage"></div>
+        <div class="reset-options-list" id="resetOptionsList" style="display:none;"></div>
+        <div class="modal-buttons">
+            <button class="modal-btn cancel" id="modalCancelBtn">取消</button>
+            <button class="modal-btn confirm" id="modalConfirmBtn">确定</button>
+        </div>
+    </div>
+</div>
+
+<div class="color-modal-overlay" id="colorModalOverlay">
+    <div class="color-modal-card">
+        <div class="color-preview" id="colorPreview"></div>
+        <div class="color-input-group">
+            <input type="text" id="colorCustomInput" placeholder="输入色号「例#FFFFFF」" autocomplete="off">
+            <button id="colorRandomBtn">随机</button>
+        </div>
+        <div class="color-modal-actions">
+            <button class="color-modal-btn" id="colorCancelBtn">取消</button>
+            <button class="color-modal-btn save-btn" id="colorSaveBtn">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="edit-overlay" id="editOverlay">
+    <div class="edit-header-bar">
+        <button class="edit-header-btn edit-back-btn" id="editLeftBtn">返回</button>
+        <button class="edit-header-btn edit-save-btn" id="editRightBtn">保存</button>
+    </div>
+    <div class="edit-content-area" id="editContentArea">
+        <div class="edit-toast-container"><div class="edit-toast-message" id="editToastMessage"></div></div>
+        <div class="edit-avatar-section" id="editAvatarSection">
+            <div class="edit-avatar-preview" id="editAvatarPreview" onclick="document.getElementById('editFileInput').click()"></div>
+            <span class="edit-avatar-hint"><strong>点击头像上传照片</strong></span>
+        </div>
+        <div class="edit-crop-section" id="editCropSection">
+            <div class="edit-crop-container" id="editCropContainer"><img id="editCropImage" src="" alt="裁剪图片"></div>
+        </div>
+        <div class="edit-input-group">
+            <label class="edit-input-label" for="editNameInput">昵称</label>
+            <input type="text" id="editNameInput" class="edit-input-field" placeholder="填个你喜欢的昵称吧~" maxlength="10">
+        </div>
+        <div class="edit-input-group">
+            <label class="edit-input-label" for="editBioInput">简介</label>
+            <input type="text" id="editBioInput" class="edit-input-field" placeholder="一句话介绍自己" maxlength="15">
+        </div>
+        <input type="file" id="editFileInput" accept="image/*">
+    </div>
+</div>
+
+<div class="modal-overlay" id="editConfirmOverlay" style="z-index: 3500;">
+    <div class="modal-card">
+        <div class="modal-title" id="editConfirmTitle">⚠️ 未保存的更改</div>
+        <div class="modal-message" id="editConfirmMessage">您有未保存的更改，是否保存后再返回？</div>
+        <div class="modal-buttons">
+            <button class="modal-btn" id="editConfirmCancelBtn" style="background:#ef4444;color:white;">放弃</button>
+            <button class="modal-btn" id="editConfirmOkBtn" style="background:#3B82F6;color:white;">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="resetConfirmOverlay" style="z-index: 3500;">
+    <div class="modal-card">
+        <div class="modal-title">⚠️ 恢复出厂设置</div>
+        <div class="modal-message"><div>⚠️此操作不可恢复不可撤销⚠️</div></div>
+        <div class="reset-options-list" id="resetConfirmList"></div>
+        <div class="modal-buttons">
+            <button class="modal-btn" id="resetConfirmCancelBtn" style="background:#3B82F6;color:white;">取消</button>
+            <button class="modal-btn" id="resetConfirmOkBtn" style="background:#ef4444;color:white;">清除</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="header" id="headerArea">
+        <h1 id="headerTitle">我的</h1>
+        <p id="headerSubtitle">个人中心 · 记忆管理 · 设置</p>
+        <div class="toast-container"><div class="toast-message" id="toastMessage"></div></div>
+    </div>
+    <div class="content-area">
+        <div class="profile-card">
+            <div class="avatar" id="profileAvatar"></div>
+            <div class="profile-info">
+                <div class="profile-name" id="profileNameDisplay">未命名用户</div>
+                <div class="profile-bio" id="profileBioDisplay">与AI相伴的每一天</div>
+            </div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value" id="conversationCount">0</div><div class="stat-label">对话次数</div></div>
+            <div class="stat-card"><div class="stat-value" id="memoryCount">0</div><div class="stat-label">记忆数量</div></div>
+        </div>
+        <div class="card">
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>🧠 我的记忆</span>
+                <div class="toggle-switch-wrap small-switch style-classic" id="memorySendSwitch" data-key="memory_send_enabled" data-off-text="关" data-on-text="开">
+                    <div class="switch-label">关</div><div class="switch-label">开</div><div class="slider"></div>
+                </div>
+            </div>
+            <div class="multiturn-hint" style="margin-top:-8px;margin-bottom:12px;"> </div>
+            <div id="memoryListContainer" class="memory-list"></div>
+            <div class="action-buttons">
+                <button class="action-btn" id="refreshMemoryBtn">🔄 刷新</button>
+                <button class="action-btn danger-btn" id="clearAllMemoryBtn">🗑️ 清空全部</button>
+            </div>
+            <p style="font-size:12px; color:#94a3b8; margin-top:12px;">💡 在首页对话中说「记住 xxx」即可添加记忆<br>开关仅影响是否将记忆发送给 AI,不影响记忆的存储<br><strong>离线也可新增记忆哦～</strong></p>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>🎨 主题与标题栏设置</span></div>
+            <div class="theme-selector">
+                <div class="theme-option" id="themeLight"><div class="theme-block">🌕 浅色</div></div>
+                <div class="theme-option" id="themeDark"><div class="theme-block">🌑 深色</div></div>
+                <div class="theme-option" id="themeAuto"><div class="theme-block">🌓 自动</div></div>
+            </div>
+            <div class="divider-line"></div>
+            <div class="color-dots-row">
+                <div class="color-dot active" data-gradient="linear-gradient(145deg, #667eea 0%, #764ba2 100%)" style="background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);" title="默认紫色"></div>
+                <div class="color-dot" data-gradient="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);" title="天空蓝"></div>
+                <div class="color-dot" data-gradient="linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)" style="background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);" title="翡翠绿"></div>
+                <div class="color-dot" data-gradient="linear-gradient(135deg, #ffd194 0%, #ff9966 100%)" style="background: linear-gradient(135deg, #ffd194 0%, #ff9966 100%);" title="暖橙色"></div>
+                <div class="color-custom-divider"></div>
+                <div class="color-dot-custom" id="colorDotCustom" title="自定义颜色"><span class="plus-icon">+</span></div>
+            </div>
+            <div class="divider-line"></div>
+            <div class="info-row"><span class="info-label">开关样式</span>
+                <div class="toggle-switch-wrap small-switch style-classic" id="switchStyleToggle" data-key="switch_style" data-off-text="经典" data-on-text="精简" data-off-value="classic" data-on-value="minimal">
+                    <div class="switch-label">经典</div><div class="switch-label">精简</div><div class="slider"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>💬 对话设置</span></div>
+            <div class="menu-item" id="multiturnMenuItem" style="cursor:default;">
+                <div class="menu-item-left"><span class="menu-item-icon">💬</span><span class="menu-item-text">携带多轮对话</span></div>
+                <div class="toggle-switch-wrap small-switch style-classic" id="multiturnSwitch" data-key="multiturn_enabled" data-off-text="关" data-on-text="开">
+                    <div class="switch-label">关</div><div class="switch-label">开</div><div class="slider"></div>
+                </div>
+            </div>
+            <div class="multiturn-hint">开启后对话将携带对话历史,提升回答连贯性但<strong>Token消耗会显著增多!</strong></div>
+            <div class="menu-item" style="cursor:default;">
+                <div class="menu-item-left"><span class="menu-item-icon">📉</span><span class="menu-item-text">精简显示模式</span></div>
+                <div class="toggle-switch-wrap small-switch style-classic" id="compactViewSwitch" data-key="compact_view" data-off-text="关" data-on-text="开">
+                    <div class="switch-label">关</div><div class="switch-label">开</div><div class="slider"></div>
+                </div>
+            </div>
+            <div class="multiturn-hint">开启后首页仅展示最近对话，大幅提升旧设备流畅度</div>
+        </div>
+        <div class="card" id="balanceCard">
+            <div class="card-title"><span>📑 聊天记录管理</span></div>
+            <div class="menu-item" style="cursor:default;">
+                <div class="menu-item-left"><span class="menu-item-icon">📤</span><span class="menu-item-text" id="exportChatText">导出聊天记录</span></div><span class="menu-item-arrow" id="exportChatArrow">›</span>
+            </div>
+            <div class="export-section" id="exportChatSection" style="display: none;">
+                <div class="export-link-wrapper">
+                    <input type="text" id="exportChatLinkInput" class="export-link-input" readonly placeholder="导出后链接将显示在这里" ondblclick="this.select()">
+                    <button class="copy-export-btn" id="copyExportLinkBtn" title="复制链接">📋</button>
+                    <button class="copy-export-btn" id="copyExportTextBtn" title="复制全文">📄</button>
+                </div>
+                <div class="export-link-hint" id="exportLinkHint">✨ 点击上方"导出聊天记录"生成下载链接，30秒内有效</div>
+            </div>
+            <div class="menu-item" id="importChatBtn" style="cursor: pointer;">
+                <div class="menu-item-left"><span class="menu-item-icon">📥</span><span class="menu-item-text">导入聊天记录</span></div><span class="menu-item-arrow">›</span>
+            </div>
+            <input type="file" id="importFileInput" accept=".txt, text/plain" style="display: none;">
+            <div class="menu-item" id="exportSchemeMenuItem" style="display: none;">
+                <div class="menu-item-left"><span class="menu-item-icon">📜</span><span class="menu-item-text">导出方案</span></div>
+                <div class="toggle-switch-wrap small-switch style-classic" id="exportSchemeSwitch" data-key="export_scheme" data-off-text="本地" data-on-text="云端" data-off-value="local" data-on-value="cloud" data-allow-empty="true">
+                    <div class="switch-label">本地</div><div class="switch-label">云端</div><div class="slider"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>👤 头像设置</span>
+                <button class="swap-avatar-btn" id="swapAvatarBtn" title="转换头像位置" style="display:none;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" style="fill: #3CA6F1;">
+        <path fill-rule="evenodd" d="M5.029,5.016C6.048,4.001 7.45,3.375 9,3.375C11.858,3.375 14.219,5.507 14.578,8.267L14.405,8.095C14.112,7.802 13.638,7.802 13.345,8.095C13.052,8.388 13.052,8.862 13.345,9.155L14.845,10.655C15.138,10.948 15.612,10.948 15.905,10.655L17.405,9.155C17.698,8.862 17.698,8.388 17.405,8.095C17.112,7.802 16.638,7.802 16.345,8.095L16.095,8.344C15.764,4.717 12.714,1.875 9,1.875C7.037,1.875 5.258,2.67 3.971,3.953C3.677,4.246 3.676,4.72 3.969,5.014C4.261,5.307 4.736,5.308 5.029,5.016ZM1.905,9.656L1.655,9.905C1.362,10.198 0.888,10.198 0.595,9.905C0.302,9.612 0.302,9.138 0.595,8.845L2.095,7.345C2.388,7.052 2.862,7.052 3.155,7.345L4.655,8.845C4.948,9.138 4.948,9.612 4.655,9.905C4.362,10.198 3.888,10.198 3.595,9.905L3.422,9.733C3.782,12.493 6.142,14.625 9,14.625C10.55,14.625 11.952,13.999 12.971,12.984C13.264,12.692 13.739,12.693 14.031,12.986C14.324,13.28 14.323,13.754 14.029,14.047C12.742,15.33 10.963,16.125 9,16.125C5.286,16.125 2.236,13.283 1.905,9.656Z"/>
+    </svg>
+</button>
+            </div>
+            <div class="menu-item" style="cursor:default;">
+                <div class="menu-item-left"><span class="menu-item-text">头像显示与隐藏</span></div>
+                <div class="toggle-switch-wrap small-switch style-classic" id="avatarEnabledSwitch" data-key="avatar_enabled" data-off-text="关" data-on-text="开">
+                    <div class="switch-label">关</div><div class="switch-label">开</div><div class="slider"></div>
+                </div>
+            </div>
+            <div id="avatarStyleSection" style="display:none;">
+                <div class="avatar-style-row">
+                    <div class="avatar-style-item" id="styleCircleItem">
+                        <div class="avatar-style-preview circle selected" id="styleCirclePreview"><img src="tx/AI-tx.jpg" alt="圆形AI"></div>
+                    </div>
+                    <div class="avatar-style-item" id="styleSquareItem">
+                        <div class="avatar-style-preview square" id="styleSquarePreview"><img src="tx/mr-tx.jpg" alt="方形用户"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>🔊 语音朗读设置</span></div>
+            <div class="speed-control" id="microsoftSpeedRow">
+                <span class="info-label">微软语音朗读语速</span>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <button class="speed-btn-round" id="microsoftSpeedMinusBtn"></button>
+                    <span class="speed-value" id="microsoftSpeedValue">1.3</span>
+                    <button class="speed-btn-round" id="microsoftSpeedPlusBtn"></button>
+                </div>
+            </div>
+            <div class="info-row" style="padding: 8px 0;">
+                <span class="info-label">音色选择</span>
+                <select id="voiceSelect" style="padding: 8px 15px; border-radius: 5px; border: 1px solid #d1d5db; font-size: 15px;">
+                    <option value="zh-CN-XiaoxiaoNeural" selected>晓晓 (女声)</option>
+                    <option value="zh-CN-XiaoyiNeural">晓伊 (女声)</option>
+                    <option value="zh-CN-YunxiNeural">云希 (男声)</option>
+                    <option value="zh-CN-YunjianNeural">云健 (男声)</option>
+                </select>
+            </div>
+            <div class="divider-line"></div>
+            <div class="info-row" style="padding: 8px 0;">
+                <span class="info-label">自动朗读</span>
+                <div class="toggle-switch-wrap small-switch style-classic" id="autoSpeechSwitch" data-key="auto_speech_enabled" data-off-text="关" data-on-text="开">
+                    <div class="switch-label">关</div><div class="switch-label">开</div><div class="slider"></div>
+                </div>
+            </div>
+            <div class="multiturn-hint" style="margin-top:4px; margin-left:0;">开启后AI输出完成后自动朗读</div>
+            <div class="divider-line"></div>
+            <div class="info-row" style="padding: 8px 0;">
+                <span class="info-label">点击输入框暂停朗读</span>
+                <div class="toggle-switch-wrap small-switch style-classic" id="pauseOnFocusSwitch" data-key="pause_on_focus" data-off-text="关" data-on-text="开">
+                    <div class="switch-label">关</div><div class="switch-label">开</div><div class="slider"></div>
+                </div>
+            </div>
+            <div class="multiturn-hint" style="margin-top:4px; margin-left:0;">开启后点击输入框自动暂停朗读,关闭后不受影响</div>
+            <div class="divider-line"></div>
+            <div class="test-speech-row">
+                <button class="test-speech-half" id="microsoftTestBtn">🔊 微软语音测试</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>🕹️指令设置</span></div>
+            <div class="menu-item" style="cursor:default;">
+                <div class="menu-item-left"><span class="menu-item-icon">📖</span><span class="menu-item-text">本地指令</span></div>
+                <div class="toggle-switch-wrap small-switch style-classic" id="localModelSwitch" data-key="local_model" data-off-text="关" data-on-text="开">
+                    <div class="switch-label">关</div><div class="switch-label">开</div><div class="slider"></div>
+                </div>
+            </div>
+            <div class="multiturn-hint">开启后可通过对话指令控制应用功能且无需网络, 在对话中说「帮助」可查看指令</div>
+            <div class="menu-item" style="cursor:default;">
+                <div class="menu-item-left"><span class="menu-item-icon">🌐</span><span class="menu-item-text">AI指令</span></div>
+                <div class="toggle-switch-wrap small-switch style-classic" id="aiInstructionSwitch" data-key="ai_instruction" data-off-text="关" data-on-text="开">
+                    <div class="switch-label">关</div><div class="switch-label">开</div><div class="slider"></div>
+                </div>
+            </div>
+            <div class="multiturn-hint">开启后，AI 可以控制应用中的部分功能<br><strong>但！您的设备状态（充电状态、电量信息）将会发送给AI！</strong></div>
+        </div>
+        <div class="card" id="speechCard">
+            <div class="card-title"><span>💰 <span id="balanceTitleText">余额查询</span></span></div>
+            <div class="info-row"><span class="info-label">全部余额</span><span class="info-value" id="totalBalance">加载中...</span></div>
+            <div class="info-row"><span class="info-label">赠送余额</span><span class="info-value" id="grantedBalance">加载中...</span></div>
+            <div class="info-row"><span class="info-label">已用余额</span><span class="info-value" id="usedBalance">计算中...</span></div>
+            <button class="reset-stats-btn" id="resetStatsBtn">🗑️ 重置余额统计</button>
+            <p style="font-size:11px; color:#94a3b8; margin-top:8px;">数据来自DeepSeek官方 每次打开页面自动更新数据<br><h4 class="warning-hint" style="color: #94a3b8; font-weight:normal;">⚠️数据仅供参考请以官方数据为准⚠️</h4></p>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>📃 个人资料管理</span></div>
+            <div class="menu-item" id="editProfileBtn" style="cursor: pointer;">
+                <div class="menu-item-left"><span class="menu-item-icon">👤</span><span class="menu-item-text">个人资料</span></div><span class="menu-item-arrow">›</span>
+            </div>
+            <div class="menu-item" style="cursor:default;">
+                <div class="menu-item-left"><span class="menu-item-text">告诉AI你的昵称</span></div>
+                <div class="toggle-switch-wrap small-switch style-classic" id="tellAiNicknameSwitch" data-key="tell_ai_nickname" data-off-text="关" data-on-text="开">
+                    <div class="switch-label">关</div><div class="switch-label">开</div><div class="slider"></div>
+                </div>
+            </div>
+            <div class="menu-item" style="cursor:default;">
+                <div class="menu-item-left"><span class="menu-item-text">告诉AI你的简介</span></div>
+                <div class="toggle-switch-wrap small-switch style-classic" id="tellAiBioSwitch" data-key="tell_ai_bio" data-off-text="关" data-on-text="开">
+                    <div class="switch-label">关</div><div class="switch-label">开</div><div class="slider"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>🔑 API key与重置</span></div>
+            <div class="menu-item" id="apiKeyToggleBtn" style="cursor: pointer;">
+                <div class="menu-item-left"><span class="menu-item-icon">🔑</span><span class="menu-item-text">API Key 设置</span></div><span class="menu-item-arrow" id="apiKeyArrow">›</span>
+            </div>
+            <div class="api-key-section" id="apiKeySection" style="display: none;">
+                <div class="api-key-input-wrapper">
+                    <input type="password" id="apiKeyInput" class="api-key-input" placeholder="输入你的 DeepSeek API Key" autocomplete="off">
+                    <button class="toggle-visibility-btn" id="toggleApiKeyVisibility" title="显示/隐藏">显示</button>
+                </div>
+                <div class="api-key-save-hint">✨ API Key 会自动保存，将在首页对话中使用<br>没有API key？<a href="https://platform.deepseek.com/api_keys" style="color: #60a5fa; text-decoration: none;">点我获取DeepSeek官方API key</a></a></div>
+            </div>
+            <div class="menu-item" id="resetToDefaultBtn" style="cursor: pointer;">
+                <div class="menu-item-left"><span class="menu-item-icon">📛</span><span class="menu-item-text">恢复默认设置</span></div><span class="menu-item-arrow">›</span>
+            </div>
+            <p style="font-size:11px; color:#94a3b8; margin-top:8px;"><h5 style="color: #94a3b8; font-weight: normal;"><strong>⚠️此操作无法恢复无法撤销⚠️</strong></h5></p>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>🌰获取 DeepSeek 官方应用</span></div>
+            <div class="menu-item" style="cursor: pointer;" onclick="if(navigator.onLine){window.location.href='https://download.deepseek.com/apk/deepseek.apk'}else{window._showToast('缺少网络加持，下载止步于此')}">
+                <div class="menu-item-left"><span class="menu-item-icon">🤖</span><span class="menu-item-text">Android下载</span></div><span class="menu-item-arrow">›</span>
+            </div>
+            <div class="menu-item" style="cursor: pointer;" onclick="if(navigator.onLine){window.location.href='https://apps.apple.com/cn/app/deepseek-ai-%E6%99%BA%E8%83%BD%E5%8A%A9%E6%89%8B/id6737597349'}else{window._showToast('缺少网络加持，下载止步于此')}">
+                <div class="menu-item-left"><span class="menu-item-icon">🍎</span><span class="menu-item-text">iOS下载</span></div><span class="menu-item-arrow">›</span>
+            </div>
+            <p style="font-size:13px; color:#94a3b8; margin-top:8px;">根据你的设备选择对应的版本或者访问<a href="https://chat.deepseek.com" style="color: #60a5fa; text-decoration: none;">网页端</a></p>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>🧩 功能扩展</span></div>
+            <div class="menu-item" onclick="window.location.href='DM.html'">
+                <div class="menu-item-left"><span class="menu-item-icon">📜</span><span class="menu-item-text">手持弹幕</span></div><span class="menu-item-arrow">›</span>
+            </div>
+            <div class="menu-item" onclick="window.location.href='GJX/GJ.html'">
+                <div class="menu-item-left"><span class="menu-item-icon">🛠️</span><span class="menu-item-text">万能工具箱</span></div><span class="menu-item-arrow">›</span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>📬 联系我们</span></div>
+            <div class="menu-item" id="feedbackLink">
+                <div class="menu-item-left"><span class="menu-item-icon">✉️</span><span class="menu-item-text">点我联系开发者</span></div><span class="menu-item-arrow">›</span>
+            </div>
+            <p style="font-size:12px; color:#94a3b8; margin-top:8px;">您可以通过该选项向我们取得联系或反馈任何问题</p>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>ℹ️ 应用信息</span></div>
+            <div class="info-row"><span class="info-label">🤖 对话模型</span><span class="info-value" id="modelVersion">DeepSeek-V4-Flash</span></div>
+            <div class="info-row"><span class="info-label">💾 存储用量</span><span class="info-value" id="storageUsage">计算中...</span></div>
+            <div class="info-row"><span class="info-label">📍 应用版本</span><span class="info-value" id="appVersionDisplay">—</span></div>
+        </div>
+    </div>
+    <div class="nav-bar">
+        <a href="index.html" class="nav-btn">
+    <span class="icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 20 20" style="fill: currentColor;">
+            <path fill-rule="evenodd" d="M13.249,16.762C12.266,17.235 11.164,17.5 10,17.5C6.204,17.5 3.066,14.679 2.569,11.02C2.745,11.089 2.936,11.124 3.142,11.124C3.563,11.124 3.904,10.954 4.167,10.615C4.431,10.271 4.562,9.817 4.562,9.254C4.562,9.076 4.579,8.953 4.613,8.884C4.652,8.809 4.727,8.743 4.839,8.686L5.343,8.445C5.472,8.376 5.595,8.364 5.713,8.41C5.831,8.45 5.929,8.528 6.007,8.643L6.956,10.064C7.393,10.701 7.827,11.161 8.258,11.442C8.69,11.724 9.11,11.864 9.519,11.864C9.916,11.864 10.235,11.747 10.476,11.511C10.717,11.27 10.837,10.951 10.837,10.555C10.837,10.325 10.784,10.116 10.678,9.926C10.571,9.731 10.426,9.57 10.241,9.444C10.129,9.364 10.084,9.286 10.106,9.211C10.129,9.131 10.191,9.091 10.291,9.091C11.255,9.091 11.986,8.913 12.484,8.557C12.982,8.201 13.231,7.661 13.231,6.937C13.231,6.466 13.153,6.093 12.996,5.817C12.84,5.536 12.658,5.318 12.45,5.163C12.243,5.008 12.061,4.881 11.904,4.784C11.747,4.686 11.669,4.58 11.669,4.465C11.669,4.339 11.719,4.221 11.82,4.112C11.927,4.003 12.042,3.853 12.165,3.664C12.267,3.502 12.349,3.206 12.413,2.897C15.371,3.901 17.5,6.702 17.5,10C17.5,10.969 17.316,11.895 16.981,12.746C16.775,12.557 16.588,12.412 16.423,12.311C16.182,12.156 15.93,12.079 15.666,12.079C15.51,12.079 15.384,12.096 15.288,12.13C15.199,12.159 15.115,12.188 15.036,12.216C14.952,12.239 14.891,12.236 14.852,12.208C14.812,12.173 14.787,12.119 14.776,12.044C14.737,11.757 14.628,11.55 14.448,11.424C14.275,11.292 14.037,11.226 13.734,11.226H13.314C13.079,11.226 12.863,11.289 12.667,11.415C12.471,11.536 12.301,11.711 12.155,11.941L12.029,12.148C11.928,12.308 11.833,12.452 11.743,12.578C11.654,12.705 11.57,12.811 11.491,12.897C11.407,12.966 11.323,13.023 11.239,13.069C11.155,13.115 11.032,13.164 10.87,13.216L10.509,13.336C10.229,13.428 10.044,13.589 9.954,13.819C9.864,14.042 9.856,14.292 9.929,14.568L10.315,15.938C10.455,16.449 10.76,16.704 11.231,16.704C11.337,16.704 11.452,16.684 11.575,16.644C11.699,16.61 11.827,16.561 11.962,16.497L12.071,16.446C12.233,16.36 12.382,16.317 12.516,16.317C12.746,16.317 12.936,16.4 13.087,16.566C13.138,16.624 13.191,16.689 13.249,16.762ZM19.167,10C19.167,15.063 15.063,19.167 10,19.167C4.937,19.167 0.833,15.063 0.833,10C0.833,4.937 4.937,0.833 10,0.833C15.063,0.833 19.167,4.937 19.167,10Z"/>
+        </svg>
+    </span>
+    <span class="label">首页</span>
+</a>
+        <a href="#" id="myNavBtn" class="nav-btn active">
+    <span class="icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="25.33" viewBox="0 0 18 19" style="fill: currentColor;">
+            <path d="M9.169,8.832C8.635,8.832 8.149,8.692 7.712,8.412C7.275,8.132 6.925,7.756 6.662,7.284C6.404,6.807 6.275,6.282 6.275,5.709C6.275,5.14 6.406,4.624 6.669,4.16C6.931,3.692 7.281,3.32 7.719,3.045C8.156,2.765 8.639,2.625 9.169,2.625C9.707,2.625 10.194,2.763 10.632,3.038C11.069,3.314 11.417,3.684 11.675,4.147C11.937,4.611 12.069,5.127 12.069,5.696C12.069,6.273 11.937,6.8 11.675,7.277C11.417,7.749 11.069,8.128 10.632,8.412C10.194,8.692 9.707,8.832 9.169,8.832Z"/>
+            <path fill-rule="evenodd" d="M9.134,16.063C12.314,16.063 14.893,15.743 14.893,13.35C14.893,11.263 12.259,9.55 9.134,9.55C6.009,9.55 3.375,11.263 3.375,13.35C3.375,15.743 5.953,16.063 9.134,16.063Z"/>
+        </svg>
+    </span>
+    <span class="label">我的</span>
+</a>
+    </div>
+</div>
+
+<script src="js/version.js"></script>
+<script src="js/cropper.js"></script>
+<script src="MYjs/speech.js"></script>
+<script src="MYjs/profile.js"></script>
+<script src="MYjs/data.js"></script>
+<script src="MYjs/main.js"></script>
+<script>
+(function(){ var cleaningHistory=false; window.addEventListener('popstate',function(){ if(cleaningHistory){ cleaningHistory=false; return; } var modal=document.getElementById('modalOverlay'); var colorModal=document.getElementById('colorModalOverlay'); var editConfirm=document.getElementById('editConfirmOverlay'); var resetConfirm=document.getElementById('resetConfirmOverlay'); var editOverlay=document.getElementById('editOverlay'); if(resetConfirm&&resetConfirm.classList.contains('show')) resetConfirm.classList.remove('show'); else if(editConfirm&&editConfirm.classList.contains('show')) editConfirm.classList.remove('show'); else if(colorModal&&colorModal.classList.contains('show')) colorModal.classList.remove('show'); else if(modal&&modal.classList.contains('show')) modal.classList.remove('show'); else if(editOverlay&&editOverlay.classList.contains('show')){ editOverlay.classList.add('closing'); editOverlay.classList.remove('show'); } }); })();
+</script>
+<script>
+(function() {
+    var aiAvatar = localStorage.getItem('ai_avatar') || 'tx/AI-tx.jpg';
+    var circleImg = document.querySelector('#styleCirclePreview img');
+    if (circleImg) {
+        circleImg.src = aiAvatar;
+    }
+})();
+</script>
+</body>
+</html>

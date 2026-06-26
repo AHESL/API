@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>手持弹幕</title>
+    <script>
+        let text = ``;
+        text = text.replace(/[\r\n]/g, '');
+    </script>
+    <style>
+        /* ========== 自定义中英文字体声明 ========== */
+        @font-face {
+            font-family: 'FontCN';
+            src: url('zw.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'FontEN';
+            src: url('yw.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        * {
+            font-family: 'FontEN', 'FontCN', sans-serif;
+        }
+        :lang(zh-CN), :lang(zh) {
+            font-family: 'FontCN', 'FontEN', sans-serif;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-overflow-scrolling: touch;
+            font-family: "FontEN", "FontCN", Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            background: black;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background ease .3s;
+            position: relative;
+        }
+
+        .text {
+            margin: 0;
+            padding: 0;
+            color: white;
+            font-size: 150px;
+            white-space: nowrap;
+            transition: color ease .3s;
+            user-select: none;
+            -webkit-user-select: none;
+            transform: rotate(0.25turn);
+            font-family: "FontCN", "FontEN", sans-serif;
+            will-change: transform;
+        }
+
+        /* 闪烁动画 */
+        @keyframes twinkling {
+            0% { opacity: 0.2; }
+            100% { opacity: 1; }
+        }
+
+        /* 竖屏滚动 */
+        @keyframes marqueen {
+            from { transform: rotate(0.25turn) translate3d(calc(50vh + 50%), 0, 0); }
+            to { transform: rotate(0.25turn) translate3d(calc(-50vh - 50%), 0, 0); }
+        }
+
+        /* 横屏滚动 */
+        @keyframes marqueen-landscape {
+            0% { transform: translate3d(calc(50vw + 50%), 0, 0); }
+            100% { transform: translate3d(calc(-50vw - 50%), 0, 0); }
+        }
+
+        /* 设置面板 + 模糊 + 淡入淡出动画 */
+        .settings {
+            position: fixed;
+            left: 0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-bottom: none;
+            bottom: 0;
+            margin: 0 auto;
+            right: 0;
+            max-width: 500px;
+            max-height: 80%;
+            overflow: auto;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(12px);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            padding: 0px 10px 10px 10px;
+            transform: translateY(calc(100% - 60px));
+            transition: transform 0.3s ease, opacity 0.25s ease, visibility 0.25s;
+            color: #f3f3f3;
+            user-select: none;
+            -webkit-user-select: none;
+            padding-bottom: constant(safe-area-inset-bottom);
+            padding-bottom: env(safe-area-inset-bottom);
+            z-index: 100;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .settings.hide {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(calc(100% - 60px));
+        }
+
+        .settings.expand {
+            transform: none;
+        }
+
+        .settings header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 20px;
+        }
+
+        .settings header .dragger {
+            height: 30%;
+            width: 30px;
+            border-radius: 50px;
+            background: #aaa;
+        }
+
+        .settings .input {
+            color: black;
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .settings .input input {
+            -webkit-appearance: none;
+            border: none;
+            outline: none;
+            margin: 0;
+            height: 35px;
+            font-size: 16px;
+            padding: 0 15px;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+            margin-right: 10px;
+            font-family: "FontCN", "FontEN", sans-serif;
+        }
+
+        .settings-item-title {
+            color: white;
+            padding: 10px 5px;
+            font-size: 14px;
+        }
+
+        .settings-item-content .item.active {
+            border: 1px solid white;
+            box-shadow: 0px 0px 5px 5px rgba(0, 0, 0, 0.1), 0px 0px 5px 2px rgba(0, 0, 0, 0.2) inset;
+        }
+
+        .color .settings-item-content {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            height: 100%;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+
+        .item-split {
+            border-right: 1px solid #e5e5e5ac;
+            height: 20px;
+        }
+
+        /* 字体大小与速度区域完全一致布局 */
+        .font-size .settings-item-content,
+        .speed .settings-item-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 8px;
+        }
+
+        /* 圆形样式 */
+        .item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            font-size: 12px;
+            overflow: hidden;
+            line-height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* 字体大小和速度圆形（可点击重置） */
+        #font-size-display.item,
+        #speed-display.item {
+            border: none !important;
+            background: rgba(255,255,255,0.2);
+            font-weight: bold;
+            font-size: 14px;
+            width: 52px;
+            height: 52px;
+            line-height: 52px;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: 0.1s linear;
+        }
+        #font-size-display.item:active,
+        #speed-display.item:active {
+            transform: scale(0.96);
+            background: rgba(255,255,255,0.4);
+        }
+
+        .font-size .item, .speed .item {
+            margin: 0;
+        }
+
+        /* 滑块样式 */
+        input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+            margin: 0 4px;
+        }
+        input[type="range"]:focus {
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            background-color: #fff;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+            border: none;
+            cursor: pointer;
+            margin-top: -9px;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+        }
+
+        .speed .tip {
+            font-size: 20px;
+            margin: 0 2px;
+            flex-shrink: 0;
+        }
+
+        .other .settings-item-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        .toggle-bz {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle-bz span {
+            margin-right: 5px;
+            font-size: 14px;
+        }
+
+        .toggle-bz input {
+            display: none;
+        }
+
+        .toggle-bz i {
+            position: relative;
+            display: inline-block;
+            margin-right: .5rem;
+            width: 46px;
+            height: 26px;
+            background-color: #e6e6e6;
+            border-radius: 23px;
+            transition: all 0.3s linear;
+        }
+
+        .toggle-bz i::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            width: 42px;
+            height: 22px;
+            background-color: #fff;
+            border-radius: 11px;
+            transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
+            transition: all 0.25s linear;
+        }
+
+        .toggle-bz i::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            width: 22px;
+            height: 22px;
+            background-color: #fff;
+            border-radius: 11px;
+            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.24);
+            transform: translate3d(2px, 2px, 0);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .toggle-bz input:checked+i {
+            background-color: #4BD763;
+        }
+
+        .toggle-bz input:checked+i::before {
+            transform: translate3d(18px, 2px, 0) scale3d(0, 0, 0);
+        }
+
+        .toggle-bz input:checked+i::after {
+            transform: translate3d(22px, 2px, 0);
+        }
+
+        /* 自定义颜色圆形完全填充 */
+        .color .settings-item-content .item:has(input[type="color"]) {
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+            background: currentColor;
+        }
+        .color .settings-item-content .item input[type="color"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .copyright {
+            font-size: 12px;
+            color: #B0B0B0;
+            margin-top: 15px;
+            position: relative;
+            line-height: 12px;
+            height: 12px;
+            text-align: center;
+        }
+
+        @supports (bottom: constant(safe-area-inset-bottom)) or (bottom: env(safe-area-inset-bottom)) {
+            .settings {
+                padding-bottom: constant(safe-area-inset-bottom);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container" class="container">
+        <div id="text" class="text"></div>
+    </div>
+    <div id="settings" class="settings">
+        <header id="dragger">
+            <div class="dragger"></div>
+        </header>
+        <div class="input">
+            <input name="text" placeholder="请输入文字" type="text">
+        </div>
+        <!-- 字体大小区域 -->
+        <div class="font-size">
+            <div class="settings-item-title">字体大小</div>
+            <div class="settings-item-content">
+                <div id="font-size-display" class="item">150px</div>
+                <div style="font-size:12px;">小</div>
+                <input min="50" step="2" max="500" name="font-size" type="range" value="150">
+                <div style="font-size:20px;">大</div>
+            </div>
+        </div>
+        <!-- 滚动速度区域 -->
+        <div class="speed">
+            <div class="settings-item-title">滚动速度</div>
+            <div class="settings-item-content">
+                <div id="speed-display" class="item">25x</div>
+                <div class="tip">🐢</div>
+                <input min="0" max="100" name="speed" type="range" value="25">
+                <div class="tip">🐰</div>
+            </div>
+        </div>
+        <div class="settings-item color">
+            <div class="settings-item-title">文字颜色</div>
+            <div class="settings-item-content" id="text-color-selector">
+                <div class="item-split"></div>
+                <div class="item" id="text-color-display"><input name="text-color" type="color"></div>
+            </div>
+        </div>
+        <div class="settings-item color">
+            <div class="settings-item-title">背景颜色</div>
+            <div class="settings-item-content" id="background-color-selector">
+                <div class="item-split"></div>
+                <div class="item" id="background-color-display"><input name="background-color" type="color"></div>
+            </div>
+        </div>
+        <div class="settings-item other">
+            <div class="settings-item-title">其他设置</div>
+            <div class="settings-item-content">
+                <label class="toggle-bz">
+                    <span>荧光</span>
+                    <input name="shine" type="checkbox">
+                    <i></i>
+                </label>
+                <label class="toggle-bz">
+                    <span>闪烁</span>
+                    <input name="twinkling" type="checkbox">
+                    <i></i>
+                </label>
+                <label class="toggle-bz">
+                    <span>反向</span>
+                    <input name="reverse-direction" type="checkbox">
+                    <i></i>
+                </label>
+            </div>
+        </div>
+        <div id="buzheng" class="copyright"></div>
+    </div>
+
+    <script>
+        class Marquee {
+            constructor(text) {
+                this.text = text;
+                this.fontSize = 350;           // 默认150px
+                this.textColor = '#fff';
+                this.backgroundColor = '#000';
+                this.speed = 15;                // 默认25x
+                this.shine = false;
+                this.twinkling = false;
+                this.reverseDirection = false;
+                this.portrait = true;
+                this.speedRate = 200;
+                this.settingsPanelExpand = false;
+                this.colorMap = ['#fff', '#FF0000', '#0033CC', '#FF9900', '#00CC00', '#000'];
+                
+                // DOM elements
+                this.settingsElement = document.getElementById('settings');
+                this.dragger = document.getElementById('dragger');
+                this.container = document.getElementById('container');
+                this.textElement = document.getElementById('text');
+                this.textInput = document.querySelector('input[name="text"]');
+                this.fontSizeDisplay = document.getElementById('font-size-display');
+                this.fontSizeInput = document.querySelector('input[name="font-size"]');
+                this.textColorSelector = document.getElementById('text-color-selector');
+                this.backgroundColorSelector = document.getElementById('background-color-selector');
+                this.textColorInput = document.querySelector('input[name="text-color"]');
+                this.backgroundColorInput = document.querySelector('input[name="background-color"]');
+                this.textColorDisplay = document.getElementById('text-color-display');
+                this.backgroundColorDisplay = document.getElementById('background-color-display');
+                this.speedInput = document.querySelector('input[name="speed"]');
+                this.speedDisplay = document.getElementById('speed-display');
+                this.shineSwitcher = document.querySelector('input[name="shine"]');
+                this.twinklingSwitcher = document.querySelector('input[name="twinkling"]');
+                this.reverseSwitcher = document.querySelector('input[name="reverse-direction"]');
+                this.buzheng = document.getElementById('buzheng');
+
+                this.init();
+            }
+
+            init() {
+                // 初始数值同步
+                this.fontSizeInput.value = this.fontSize;
+                this.textElement.style.fontSize = this.fontSize + 'px';
+                this.textElement.innerText = this.text;
+                this.speedInput.value = this.speed;
+                this.updateSpeedDisplay(this.speed);
+                this.updateFontSizeDisplay(this.fontSize);
+                this.textInput.value = this.text;
+                
+                // 构建预设色块
+                this.textColorSelector.insertAdjacentHTML('afterbegin', this.createColorItems());
+                this.backgroundColorSelector.insertAdjacentHTML('afterbegin', this.createColorItems('background'));
+                
+                // 方向检测
+                this.detectOrientation();
+                this.bindEvents();
+                this._setAnimation();      // 启动弹幕滚动动画
+                this._syncCustomColorBg();
+            }
+
+            createColorItems(prop = 'color') {
+                const colorArray = prop === 'color' ? this.colorMap : [...this.colorMap].reverse();
+                return colorArray.reduce((acc, cur, idx) => `${acc}<div data-color="${cur}" class="item${idx === 0 ? ' active' : ''}" style="background:${cur}"></div>`, '');
+            }
+
+            updateSpeedDisplay(val) {
+                this.speedDisplay.innerText = val + 'x';
+            }
+
+            updateFontSizeDisplay(val) {
+                this.fontSizeDisplay.innerText = val + 'px';
+            }
+
+            // 平滑滑动滑块
+            smoothSlideTo(targetValue, slider, isFontSize = true) {
+                const start = parseFloat(slider.value);
+                const delta = targetValue - start;
+                if (delta === 0) return;
+                const duration = 180; // 滑动时长 (ms)
+                const startTime = performance.now();
+                const animate = (now) => {
+                    const elapsed = now - startTime;
+                    let t = Math.min(1, elapsed / duration);
+                    // 缓动 easeOutQuad
+                    const ease = 1 - (1 - t) * (1 - t);
+                    const current = start + delta * ease;
+                    slider.value = current;
+                    // 触发input事件同步UI和效果
+                    slider.dispatchEvent(new Event('input', { bubbles: true }));
+                    if (t < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        slider.value = targetValue;
+                        slider.dispatchEvent(new Event('input', { bubbles: true }));
+                        slider.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                };
+                requestAnimationFrame(animate);
+            }
+
+            resetFontSize() {
+                const defaultSize = 350;            //按钮回退值大小
+                if (this.fontSize === defaultSize) return;
+                this.smoothSlideTo(defaultSize, this.fontSizeInput, true);
+            }
+
+            resetSpeed() {
+                const defaultSpeed = 15;          //按钮回退值速度
+                if (this.speed === defaultSpeed) return;
+                this.smoothSlideTo(defaultSpeed, this.speedInput, false);
+            }
+
+            detectOrientation() {
+                this.portrait = window.innerHeight > window.innerWidth;
+                if (!this.portrait) {
+                    this.textElement.style.removeProperty("transform");
+                } else {
+                    this.textElement.style.transform = "rotate(0.25turn)";
+                }
+            }
+
+            _syncCustomColorBg() {
+                if (this.textColorDisplay) this.textColorDisplay.style.backgroundColor = this.textColor;
+                if (this.backgroundColorDisplay) this.backgroundColorDisplay.style.backgroundColor = this.backgroundColor;
+            }
+
+            bindEvents() {
+                // 输入框回车失焦
+                this.textInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.textInput.blur();
+                        this.textChange({ target: this.textInput });
+                    }
+                });
+                this.textInput.addEventListener('change', this.textChange.bind(this));
+
+                // 字体大小滑块实时
+                this.fontSizeInput.addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    this.updateFontSizeDisplay(val);
+                    this.fontSize = parseFloat(val);
+                    this.textElement.style.fontSize = this.fontSize + 'px';
+                    this._resetTextAnimation();
+                });
+                this.fontSizeInput.addEventListener('change', () => {});
+
+                // 速度滑块实时
+                this.speedInput.addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    this.updateSpeedDisplay(val);
+                    this.speed = parseFloat(val);
+                    this._setAnimation();
+                });
+
+                // 颜色选择
+                this.textColorInput.addEventListener('change', (e) => {
+                    this.textColor = e.target.value;
+                    this._setColor('color', true);
+                    this._syncCustomColorBg();
+                });
+                this.backgroundColorInput.addEventListener('change', (e) => {
+                    this.backgroundColor = e.target.value;
+                    this._setColor('background', true);
+                    this._syncCustomColorBg();
+                });
+                this.textColorSelector.addEventListener('click', (e) => {
+                    const colorDiv = e.target.closest('.item[data-color]');
+                    if (colorDiv && colorDiv.dataset.color) {
+                        this.textColor = colorDiv.dataset.color;
+                        this._setColor('color');
+                        this._syncCustomColorBg();
+                    }
+                });
+                this.backgroundColorSelector.addEventListener('click', (e) => {
+                    const colorDiv = e.target.closest('.item[data-color]');
+                    if (colorDiv && colorDiv.dataset.color) {
+                        this.backgroundColor = colorDiv.dataset.color;
+                        this._setColor('background');
+                        this._syncCustomColorBg();
+                    }
+                });
+
+                // 开关
+                this.shineSwitcher.addEventListener('change', (e) => {
+                    this.shine = e.target.checked;
+                    this._setShine();
+                });
+                this.twinklingSwitcher.addEventListener('change', (e) => {
+                    this.twinkling = e.target.checked;
+                    this._setAnimation();
+                });
+                this.reverseSwitcher.addEventListener('change', (e) => {
+                    this.reverseDirection = e.target.checked;
+                    this._setAnimation();
+                });
+
+                // 拖拽展开/收起
+                this.dragger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // 如果当前是隐藏状态，先显示再展开
+                    if (this.settingsElement.classList.contains('hide')) {
+                        this.settingsElement.classList.remove('hide');
+                    }
+                    this.settingsPanelExpand = !this.settingsPanelExpand;
+                    this.settingsElement.classList.toggle('expand', this.settingsPanelExpand);
+                });
+
+                // 重置事件：点击圆形数值
+                this.fontSizeDisplay.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.resetFontSize();
+                });
+                this.speedDisplay.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.resetSpeed();
+                });
+
+                // 全局点击容器（弹幕区域）
+                this.container.addEventListener('click', (e) => {
+                    // 若点击在设置面板内部，不关闭
+                    if (this.settingsElement.contains(e.target)) return;
+                    
+                    // 如果面板处于展开状态 -> 收起面板（保留可见，移出expand）
+                    if (this.settingsPanelExpand) {
+                        this.settingsPanelExpand = false;
+                        this.settingsElement.classList.remove('expand');
+                    } 
+                    // 否则（折叠状态） -> 切换隐藏类（淡入淡出）
+                    else {
+                        this.settingsElement.classList.toggle('hide');
+                    }
+                });
+
+                window.addEventListener('resize', () => {
+                    this.detectOrientation();
+                    this._setAnimation();
+                });
+                window.addEventListener('orientationchange', () => {
+                    setTimeout(() => {
+                        this.detectOrientation();
+                        this._setAnimation();
+                    }, 20);
+                });
+            }
+
+            _setShine() {
+                if (this.shine) {
+                    this.textElement.style.textShadow = `0 0 12px ${this.textColor}, 0 0 25px ${this.textColor}`;
+                } else {
+                    this.textElement.style.textShadow = 'none';
+                }
+            }
+
+            get textAnimation() {
+                const keyframes = this.portrait ? 'marqueen' : 'marqueen-landscape';
+                let duration;
+                if (this.speed === 0) {
+                    duration = 0;
+                } else {
+                    const speedFactor = (100 - this.speed) / 100;
+                    let baseTime = Math.max(3000, this.text.length * 28);
+                    duration = Math.round(baseTime * (0.4 + speedFactor * 1.6));
+                    duration = Math.min(duration, 28000);
+                    if (duration <= 0) duration = 1000;
+                }
+                let anim = `${keyframes} ${duration}ms linear infinite`;
+                if (this.reverseDirection) anim += ' reverse';
+                if (this.twinkling) anim += `, twinkling 280ms ease-in-out infinite`;
+                return anim;
+            }
+
+            _resetTextAnimation() {
+                if (!this.textElement) return;
+                const newAnim = this.textAnimation;
+                if (this.textElement.style.animation === newAnim) return;
+                this.textElement.style.animation = 'none';
+                this.textElement.offsetHeight; // 强制重绘
+                this.textElement.style.animation = newAnim;
+            }
+
+            _setAnimation() {
+                this._resetTextAnimation();
+            }
+
+            textChange(event) {
+                this.text = event.target.value.replace(/[\r\n]/g, '');
+                if (this.text === '') this.text = ' ';
+                this.textElement.innerText = this.text;
+                this._setAnimation();
+            }
+
+            _setColor(prop = 'color', input = false) {
+                let selector, element, display, colorValue;
+                if (prop === 'color') {
+                    selector = this.textColorSelector;
+                    element = this.textElement;
+                    display = this.textColorDisplay;
+                    colorValue = this.textColor;
+                } else {
+                    selector = this.backgroundColorSelector;
+                    element = this.container;
+                    display = this.backgroundColorDisplay;
+                    colorValue = this.backgroundColor;
+                }
+                display.classList.toggle('active', input);
+                for (let child of selector.children) {
+                    if (!child.dataset.color) continue;
+                    child.classList.toggle('active', child.dataset.color === colorValue);
+                }
+                element.style.setProperty(prop, colorValue);
+                this._setShine();
+            }
+        }
+
+        const marquee = new Marquee(text);
+    </script>
+</body>
+</html>
