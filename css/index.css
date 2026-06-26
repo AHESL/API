@@ -1,0 +1,1419 @@
+/* ================================================================
+   1. 字体定义
+   ================================================================ */
+
+@font-face {
+    font-family: 'MyYW';
+    src: url('../yw.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'MyZW';
+    src: url('../zw.ttf') format('truetype');
+    font-display: swap;
+}
+
+
+/* ================================================================
+   2. 全局重置与基础样式
+   ================================================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-drag: none !important;
+    outline: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    font-family: 'MyYW', 'MyZW', sans-serif;
+}
+
+body {
+    background-color: #f0f2f5;
+    color: #1a1a1a;
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+    padding: 20px;
+}
+
+/* -------- 深色模式 -------- */
+body.dark-mode {
+    background-color: #0f0f0f;
+}
+
+
+/* ================================================================
+   3. 状态栏占位
+   ================================================================ */
+
+.status-bar-placeholder {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: env(safe-area-inset-top, 24px);
+    background-color: #f0f2f5;
+    z-index: 100;
+    transition: background-color 0.3s ease;
+}
+
+/* -------- 深色模式 -------- */
+body.dark-mode .status-bar-placeholder {
+    background-color: #0f0f0f;
+}
+
+
+/* ================================================================
+   4. 主容器布局
+   ================================================================ */
+
+.main-wrapper {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: env(safe-area-inset-top, 24px);
+}
+
+.container {
+    max-width: 880px;
+    width: 100%;
+    margin: 0 auto;
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08),
+                0 4px 12px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 780px;
+    max-height: calc(90vh - env(safe-area-inset-top, 24px));
+    transition: background 0.3s, box-shadow 0.3s;
+}
+
+/* -------- 深色模式 -------- */
+body.dark-mode .container {
+    background: #1a1a1a;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+
+/* ================================================================
+   5. 头部
+   ================================================================ */
+
+.header {
+    color: white;
+    padding: 24px 24px 20px;
+    text-align: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.3s;
+}
+
+.header h1 {
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+    transition: color 0.3s;
+}
+
+.header p {
+    font-size: 14px;
+    opacity: 0.92;
+    font-weight: 400;
+    transition: color 0.3s;
+}
+
+
+/* ================================================================
+   6. 聊天容器（消息列表区域）
+   ================================================================ */
+
+.chat-container {
+    flex: 1;
+    padding: 22px 20px;
+    overflow-y: auto;
+    background-color: #fafbfc;
+    scroll-behavior: auto;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    transition: background-color 0.3s;
+}
+
+/* -------- 深色模式 -------- */
+body.dark-mode .chat-container {
+    background-color: #121212;
+}
+
+.chat-container::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+    background: transparent;
+}
+
+
+/* ================================================================
+   7. 消息行
+   ================================================================ */
+
+.message-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 18px;
+    animation: fadeIn 0.2s ease-out;
+    gap: 0;
+}
+
+/* 用户消息（右对齐） */
+.message-row.user {
+    flex-direction: row-reverse;
+    padding-right: 0;
+}
+
+/* AI 消息（左对齐） */
+.message-row.ai {
+    flex-direction: row;
+    padding-left: 0;
+}
+
+/* 头像启用时调整间距 */
+.avatar-enabled .message-row.user {
+    padding-right: 6px;
+}
+
+.avatar-enabled .message-row.ai {
+    padding-left: 6px;
+}
+
+.avatar-enabled .message-row {
+    gap: 6px;
+}
+
+
+/* ================================================================
+   8. 头像
+   ================================================================ */
+
+.avatar-img {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    display: none;
+}
+
+.avatar-img.rounded-square {
+    border-radius: 20%;
+}
+
+.avatar-img[src=""],
+.avatar-img:not([src]) {
+    display: none;
+}
+
+/* 头像启用时显示 */
+.avatar-enabled .avatar-img {
+    display: block;
+}
+
+.avatar-enabled .avatar-img[src=""],
+.avatar-enabled .avatar-img:not([src]) {
+    display: none;
+}
+
+
+/* ================================================================
+   9. 气泡列
+   ================================================================ */
+
+.bubble-column {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.message-row.user .bubble-column {
+    align-items: flex-end;
+}
+
+.message-row.ai .bubble-column {
+    align-items: flex-start;
+}
+
+.message {
+    display: flex;
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.user-message {
+    justify-content: flex-end;
+    background: transparent !important;
+    padding: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 0 !important;
+}
+
+.ai-message {
+    justify-content: flex-start;
+    background: transparent !important;
+    padding: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 0 !important;
+}
+
+
+/* ================================================================
+   10. 聊天气泡
+   ================================================================ */
+
+.bubble {
+    display: inline-block;
+    max-width: 87%;
+    padding: 12px 16px;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    line-height: 1.2;
+    font-size: 15px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03),
+                0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.1s ease;
+    overflow-x: visible;
+    border-radius: 10px;
+}
+
+/* -------- 深色模式 -------- */
+body.dark-mode .bubble {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* -------- 用户消息气泡（浅色模式） -------- */
+.user-message .bubble {
+    background-color: #e3f2fd;
+    border-radius: 10px;
+    color: #1e293b;
+    border: 1px solid rgba(102, 126, 234, 0.12);
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+
+/* -------- AI 消息气泡（浅色模式） -------- */
+.ai-message .bubble {
+    background-color: #ffffff;
+    border-radius: 10px;
+    color: #1e293b;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02),
+                0 1px 3px rgba(0, 0, 0, 0.03);
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+}
+
+/* -------- 深色模式 - 用户消息气泡 -------- */
+body.dark-mode .user-message .bubble {
+    background-color: #1e3a5f;
+    color: #e0e0e0;
+    border: 1px solid #2a4a6a;
+}
+
+/* -------- 深色模式 - AI 消息气泡 -------- */
+body.dark-mode .ai-message .bubble {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid #3a3a3a;
+}
+
+/* -------- 错误消息气泡 -------- */
+.bubble.error-bubble {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fecaca !important;
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.08) !important;
+    padding-bottom: 0px !important;
+}
+
+/* -------- 深色模式 - 错误消息气泡 -------- */
+body.dark-mode .bubble.error-bubble {
+    background-color: #4a1e1e !important;
+    color: #ffb3b3 !important;
+    border: 1px solid #6a2a2a !important;
+}
+
+/* -------- 思考中气泡 -------- */
+.bubble.thinking-bubble {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #e2e8f0 !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px !important;
+}
+
+/* -------- 深色模式 - 思考中气泡 -------- */
+body.dark-mode .bubble.thinking-bubble {
+    background-color: #2a2a2a !important;
+    color: #b0b0b0 !important;
+    border: 1px solid #3a3a3a !important;
+}
+
+/* -------- 思考动画点 -------- */
+.thinking-dots {
+    display: inline-flex;
+    align-items: center;
+}
+
+.thinking-dots span {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #64748b;
+    margin: 0 3px;
+    animation: dotPulse 1.4s infinite ease-in-out both;
+}
+
+/* -------- 深色模式 - 思考动画点 -------- */
+body.dark-mode .thinking-dots span {
+    background-color: #a0a0a0;
+}
+
+.thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+.thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0s; }
+
+@keyframes dotPulse {
+    0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+    40% { transform: scale(1.2); opacity: 1; }
+}
+
+/* -------- 气泡内段落 -------- */
+.bubble p {
+    margin: 0;
+    display: block;
+}
+
+.bubble p:last-child {
+    margin-bottom: 0;
+}
+
+
+/* ================================================================
+   11. 气泡内富文本样式
+   ================================================================ */
+
+.bubble h1, .bubble h2, .bubble h3, .bubble h4 {
+    margin: 16px 0 10px 0;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.bubble h1 { font-size: 1.8em; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 6px; }
+.bubble h2 { font-size: 1.5em; }
+.bubble h3 { font-size: 1.25em; }
+
+.bubble ul, .bubble ol {
+    margin: 10px 0 10px 22px;
+    padding-left: 4px;
+}
+
+.bubble li { margin-bottom: 6px; }
+
+.bubble code {
+    background-color: #f1f5f9;
+    padding: 3px 7px;
+    border-radius: 10px;
+    font-family: monospace;
+    font-size: 0.9em;
+    color: #2d3a5e;
+}
+
+/* -------- 深色模式 - 行内代码 -------- */
+body.dark-mode .bubble code {
+    background-color: #333;
+    color: #ddd;
+}
+
+.bubble pre {
+    background-color: #1e293b;
+    color: #e2e8f0;
+    padding: 16px;
+    border-radius: 18px;
+    overflow-x: auto;
+    margin: 14px 0;
+    font-size: 14px;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.2);
+}
+
+/* -------- 深色模式 - 代码块 -------- */
+body.dark-mode .bubble pre {
+    background-color: #0d1117;
+    color: #c9d1d9;
+}
+
+.bubble pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+}
+
+.bubble blockquote {
+    border-left: 5px solid #3B82F6;
+    padding-left: 18px;
+    color: #475569;
+    margin: 14px 0;
+    background-color: #f8fafc;
+    padding: 10px 16px;
+    border-radius: 12px;
+}
+
+/* -------- 深色模式 - 引用块 -------- */
+body.dark-mode .bubble blockquote {
+    background-color: #1e1e1e;
+    border-left-color: #3B82F6;
+    color: #bbb;
+}
+
+.bubble a {
+    color: #3B82F6;
+    text-decoration: none;
+}
+
+.bubble a:hover { text-decoration: underline; }
+
+/* -------- 深色模式 - 链接 -------- */
+body.dark-mode .bubble a {
+    color: #60a5fa;
+}
+
+
+/* ================================================================
+   12. 消息操作按钮（复制、朗读、删除）
+   ================================================================ */
+
+.action-btn-row {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+    margin-bottom: 1%;
+}
+
+.copy-btn,
+.speech-btn,
+.delete-btn {
+    width: auto;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    border: 1px solid rgba(0,0,0,0.1);
+    color: #475569;
+    background: rgba(235,235,240,0.7);
+    backdrop-filter: blur(4px);
+}
+
+.delete-btn {
+    color: #ef4444;
+    border-color: rgba(239,68,68,0.2);
+    background: rgba(254,226,226,0.7);
+    margin-left: auto;
+}
+
+/* -------- 深色模式 - 操作按钮 -------- */
+body.dark-mode .copy-btn,
+body.dark-mode .speech-btn {
+    background: rgba(50,50,55,0.7);
+    border-color: rgba(255,255,255,0.1);
+    color: #b0b0b0;
+}
+
+body.dark-mode .delete-btn {
+    background: rgba(80,30,30,0.7);
+    border-color: rgba(255,100,100,0.2);
+    color: #ff9999;
+}
+
+/* -------- 按钮按下状态 -------- */
+.copy-btn:active,
+.speech-btn:active,
+.delete-btn:active {
+    transform: scale(0.9);
+}
+
+.copy-btn:active {
+    background: #3B82F6;
+    color: white;
+    border-color: #3B82F6;
+}
+
+.speech-btn:active {
+    background: #3B82F6;
+    color: white;
+    border-color: #3B82F6;
+}
+
+.delete-btn:active {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+
+/* ================================================================
+   13. 确认气泡（用于危险操作确认）
+   ================================================================ */
+
+.confirm-bubble .bubble-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.confirm-btn {
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.confirm-btn.confirm-ok {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+.confirm-btn.confirm-ok:hover { background: #dc2626; }
+
+.confirm-btn.confirm-cancel {
+    background: #3B82F6;
+    color: white;
+    border-color: #3B82F6;
+}
+
+.confirm-btn.confirm-cancel:hover { background: #2563eb; }
+
+/* -------- 深色模式 - 确认按钮 -------- */
+body.dark-mode .confirm-btn.confirm-ok {
+    background: #ef4444;
+    color: white;
+}
+
+body.dark-mode .confirm-btn.confirm-cancel {
+    background: #3B82F6;
+    color: white;
+}
+
+
+/* ================================================================
+   14. 输入区域
+   ================================================================ */
+
+.input-section {
+    padding: 18px 20px 12px;
+    border-top: 1px solid #e9ecf0;
+    background: white;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    flex-shrink: 0;
+    transition: background 0.3s, border-color 0.3s;
+}
+
+/* -------- 深色模式 - 输入区域 -------- */
+body.dark-mode .input-section {
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+}
+
+.chat-input {
+    flex: 1;
+    padding: 14px 18px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 15px;
+    font-size: 14px;
+    background: #ffffff;
+    transition: border 0.2s, box-shadow 0.2s, background 0.3s, color 0.3s;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+    color: #1e293b;
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+    touch-action: auto !important;
+}
+
+/* -------- 深色模式 - 输入框 -------- */
+body.dark-mode .chat-input {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+.chat-input::placeholder { color: #888; }
+
+body.dark-mode .chat-input::placeholder { color: #888; }
+
+.chat-input:focus {
+    outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* -------- 深色模式 - 输入框聚焦 -------- */
+body.dark-mode .chat-input:focus {
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+
+/* ================================================================
+   15. 发送按钮
+   ================================================================ */
+
+.send-btn {
+    background: #3B82F6;
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 15px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 6px 14px rgba(59, 130, 246, 0.25);
+    letter-spacing: 0.3px;
+}
+
+/* -------- 深色模式 - 发送按钮 -------- */
+body.dark-mode .send-btn {
+    background: #3B82F6;
+    color: white;
+    box-shadow: 0 6px 14px rgba(59, 130, 246, 0.4);
+}
+
+.send-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(59, 130, 246, 0.35);
+    background: #2563eb;
+}
+
+/* -------- 深色模式 - 发送按钮悬停 -------- */
+body.dark-mode .send-btn:hover {
+    background: #2563eb;
+}
+
+.send-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
+
+.send-btn:disabled {
+    background: #cbd5e1;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    cursor: not-allowed;
+    transform: none;
+    opacity: 0.8;
+}
+
+.send-btn:disabled:hover {
+    background: #cbd5e1;
+    transform: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* -------- 深色模式 - 发送按钮禁用 -------- */
+body.dark-mode .send-btn:disabled {
+    background: #4a5568;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .send-btn:disabled:hover {
+    background: #4a5568;
+}
+
+
+/* ================================================================
+   16. 导航栏
+   ================================================================ */
+
+.nav-bar {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: white;
+    border-top: 1px solid #e9ecf0;
+    padding: 8px 16px 10px;
+    flex-shrink: 0;
+    transition: background 0.3s, border-color 0.3s, opacity 0.2s;
+}
+
+/* -------- 深色模式 - 导航栏 -------- */
+body.dark-mode .nav-bar {
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+}
+
+.nav-bar.hidden { display: none; }
+
+.nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #64748b;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    transition: all 0.2s;
+    min-width: 70px;
+}
+
+/* -------- 深色模式 - 导航按钮 -------- */
+body.dark-mode .nav-btn {
+    color: #a0a0a0;
+}
+
+.nav-btn .icon {
+    line-height: 1.2;
+    margin-bottom: -2px;
+}
+
+/* 统一拉近"我的"按钮图标与文字的间距 */
+a[href="My.html"] .icon {
+    margin-bottom: -6px !important;
+}
+
+.nav-btn .label {
+    font-weight: 500;
+}
+
+.nav-btn.active {
+    color: #3B82F6;
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* -------- 深色模式 - 导航按钮激活 -------- */
+body.dark-mode .nav-btn.active {
+    color: #60a5fa;
+}
+
+.nav-btn:hover {
+    background: #f1f5f9;
+}
+
+/* -------- 深色模式 - 导航按钮悬停 -------- */
+body.dark-mode .nav-btn:hover {
+    background: #2a2a2a;
+}
+
+
+/* ================================================================
+   17. 动画
+   ================================================================ */
+
+@keyframes slideInFromBottom {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideOutToBottom {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(30px); }
+}
+
+@keyframes slideOutToTop {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.confirm-bubble {
+    animation: slideInFromBottom 0.25s ease-out forwards;
+}
+
+.confirm-bubble.removing {
+    animation: slideOutToBottom 0.2s ease-in forwards;
+    pointer-events: none;
+}
+
+.clear-notice-bubble {
+    animation: slideInFromBottom 0.25s ease-out forwards;
+}
+
+.message.removing {
+    animation: slideOutToTop 0.2s ease-in forwards;
+    pointer-events: none;
+}
+
+
+/* ================================================================
+   18. AI 编辑覆盖层（首页 AI 角色编辑）
+   ================================================================ */
+
+.ai-edit-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3000;
+    background: #f0f2f5;
+    transform: translateY(-100%);
+    transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+    display: flex;
+    flex-direction: column;
+}
+
+/* -------- 深色模式 - AI 编辑覆盖层 -------- */
+body.dark-mode .ai-edit-overlay {
+    background: #0f0f0f;
+}
+
+.ai-edit-overlay.show {
+    transform: translateY(0);
+}
+
+.ai-edit-overlay.closing {
+    transform: translateY(-100%);
+}
+
+/* -------- 编辑头部 -------- */
+.ai-edit-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e9ecf0;
+    flex-shrink: 0;
+}
+
+/* -------- 深色模式 - 编辑头部 -------- */
+body.dark-mode .ai-edit-header-bar {
+    border-bottom-color: #333;
+}
+
+.ai-edit-header-btn {
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    color: white;
+}
+
+.ai-edit-back-btn {
+    background: #ef4444;
+}
+
+.ai-edit-save-btn {
+    background: #3B82F6;
+}
+
+/* -------- 编辑内容 -------- */
+.ai-edit-content {
+    flex: 1;
+    padding: 24px 20px;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.ai-edit-content::-webkit-scrollbar {
+    display: none;
+}
+
+/* -------- AI 头像预览 -------- */
+.ai-avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.ai-avatar-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #f0f2f5 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+    color: white;
+    margin-bottom: 12px;
+    cursor: pointer;
+    overflow: hidden;
+    border: 3px solid #颜色;
+}
+
+/* -------- 深色模式 - AI 头像预览 -------- */
+body.dark-mode .ai-avatar-preview {
+    background: #0f0f0f !important;
+}
+
+.ai-avatar-hint {
+    font-size: 14px;
+    color: #64748b;
+}
+
+/* -------- 裁剪区域 -------- */
+.crop-section {
+    display: none;
+    flex-direction: column;
+    margin-bottom: 24px;
+}
+
+.crop-section.active {
+    display: flex;
+}
+
+.crop-container {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: #颜色;
+    border-radius: 0px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.crop-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* -------- 角色切换开关 -------- */
+.persona-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+}
+
+.persona-toggle-label {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* -------- 深色模式 - 角色切换标签 -------- */
+body.dark-mode .persona-toggle-label {
+    color: #e0e0e0;
+}
+
+.toggle-block {
+    width: 48px;
+    height: 32px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    border: 2px solid transparent;
+    cursor: pointer;
+}
+
+.toggle-block.active {
+    border-color: #3B82F6;
+    background: #dbeafe;
+    color: #1e3a8a;
+}
+
+/* -------- AI 输入框 -------- */
+.ai-input-group {
+    margin-bottom: 20px;
+}
+
+.ai-input-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+
+/* -------- 深色模式 - AI 输入标签 -------- */
+body.dark-mode .ai-input-label {
+    color: #e0e0e0;
+}
+
+.ai-input-field {
+    width: 100%;
+    padding: 14px 18px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px !important;
+    font-size: 16px;
+    background: white;
+    color: #1e293b;
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+    touch-action: auto !important;
+}
+
+.ai-input-field.large {
+    min-height: 80px;
+}
+
+.ai-input-field:disabled {
+    opacity: 0.4;
+    background: #f1f5f9;
+    cursor: not-allowed;
+}
+
+/* -------- 深色模式 - AI 输入框 -------- */
+body.dark-mode .ai-input-field {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+body.dark-mode .ai-input-field:disabled {
+    background: #1a1a1a;
+}
+
+#aiFileInput {
+    display: none;
+}
+
+
+/* ================================================================
+   19. 全局模态框
+   ================================================================ */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-card {
+    background: white;
+    border-radius: 24px;
+    padding: 24px 22px;
+    max-width: 400px;
+    width: 85%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    transform: scale(0.9);
+    transition: transform 0.5s ease;
+}
+
+.modal-overlay.show .modal-card {
+    transform: scale(1);
+}
+
+/* -------- 深色模式 - 模态框 -------- */
+body.dark-mode .modal-card {
+    background: #1e1e1e;
+    border: 1px solid #333;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+/* -------- 深色模式 - 模态框标题 -------- */
+body.dark-mode .modal-title {
+    color: #e0e0e0;
+}
+
+.modal-message {
+    color: #475569;
+    margin-bottom: 24px;
+    line-height: 1.5;
+    font-size: 15px;
+}
+
+/* -------- 深色模式 - 模态框消息 -------- */
+body.dark-mode .modal-message {
+    color: #b0b0b0;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.modal-btn {
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    color: white;
+}
+
+.modal-btn.confirm {
+    background: #ef4444;
+}
+
+.modal-btn.cancel {
+    background: #3B82F6;
+}
+
+
+/* ================================================================
+   20. 长按菜单
+   ================================================================ */
+
+.longpress-menu {
+    position: fixed;
+    z-index: 9999;
+    background: rgba(30, 30, 30, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 12px;
+    padding: 4px 0;
+    min-width: 90px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+.longpress-menu.show {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+.longpress-menu-item {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 15px;
+    color: #ffffff;
+    background: transparent;
+    border: none;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: inherit;
+}
+
+.longpress-menu-item:active {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.longpress-menu-item.danger {
+    color: #ff4444;
+}
+
+.longpress-menu-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 4px 12px;
+}
+
+/* -------- 浅色模式 - 长按菜单 -------- */
+body:not(.dark-mode) .longpress-menu {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+body:not(.dark-mode) .longpress-menu-item {
+    color: #1e293b;
+}
+
+body:not(.dark-mode) .longpress-menu-item.danger {
+    color: #ef4444;
+}
+
+body:not(.dark-mode) .longpress-menu-divider {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+
+/* ================================================================
+   21. 响应式设计
+   ================================================================ */
+
+/* -------- 平板/手机 -------- */
+@media (max-width: 60000px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        height: 95vh;
+        border-radius: 20px;
+    }
+
+    .header {
+        padding: 18px 16px;
+    }
+
+    .header h1 {
+        font-size: 22px;
+    }
+
+    /* 头像未启用时的响应式调整 */
+    .bubble {
+        padding: 9px 9px;
+        font-size: 15px;
+        max-width: 87%;
+    }
+
+    .send-btn {
+        padding: 12px 20px;
+    }
+
+    .nav-btn {
+        min-width: 60px;
+    }
+
+    .copy-btn,
+    .speech-btn,
+    .delete-btn {
+        height: 22px;
+        padding: 0 8px;
+        font-size: 11px;
+    }
+
+    .avatar-img {
+        width: 32px;
+        height: 32px;
+    }
+
+    .message-row {
+        gap: 4px;
+    }
+
+    .message-row.user {
+        padding-right: 4px;
+    }
+
+    .message-row.ai {
+        padding-left: 4px;
+    }
+
+    /* 头像启用时的响应式调整 */
+    .avatar-enabled .bubble {
+        padding: 7px 7px;
+        font-size: 13px;
+        max-width: 87%;
+    }
+
+    .avatar-enabled .message-row {
+        gap: 4px;
+    }
+
+    .avatar-enabled .message-row.user {
+        padding-right: 4px;
+    }
+
+    .avatar-enabled .message-row.ai {
+        padding-left: 4px;
+    }
+
+    .avatar-enabled .avatar-img {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+
+/* ================================================================
+   22. 杂项修复
+   ================================================================ */
+
+/* 确保输入框在移动端可正常输入 */
+input, textarea {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+    touch-action: auto !important;
+}
+
+/* 统一交互元素禁用高亮 */
+button,
+.action-btn,
+.danger-btn,
+.send-btn,
+.confirm-btn,
+.header,
+.menu-item,
+.nav-btn,
+.copy-btn,
+.speech-btn,
+.delete-btn,
+.modal-btn,
+.ai-edit-header-btn {
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    background-clip: padding-box !important;
+    -webkit-background-clip: padding-box !important;
+}
+
+/* 聊天气泡恢复长按能力，但禁止文本选择 */
+.bubble,
+.bubble * {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: default !important;
+    touch-action: auto !important;
+}
