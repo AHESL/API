@@ -398,6 +398,12 @@ function showDeleteConfirmBubble(bubbleElement) {
  * @param {Element} bubble - 气泡 DOM 元素
  */
 function showLongPressMenu(x, y, bubble) {
+    // 如果气泡正在思考/流式输出中，禁用长按菜单
+    if (bubble && (bubble.classList.contains('thinking-bubble') || 
+                   (isStreaming && bubble.closest('.message-row.ai') && !bubble.textContent.trim()))) {
+        return;
+    }
+
     // 移除旧菜单
     const old = document.querySelector('.longpress-menu');
     if (old) old.remove();
